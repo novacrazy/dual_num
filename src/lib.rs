@@ -16,15 +16,11 @@
 //!
 //! use dual_num::{DualNumber, Float, differentiate};
 //!
-//! fn test<F: Float>(x: F) -> F {
-//!     x.sqrt() + F::from(1.0).unwrap()
-//! }
-//!
 //! fn main() {
 //!     // find partial derivative at x=4.0
-//!     let result = differentiate(4.0f64, test);
-//!
-//!     println!("{:.5}", result); // 0.25000
+//!     println!("{:.5}", differentiate(4.0f64, |x| {
+//!         x.sqrt() + DualNumber::from_real(1.0)
+//!     })); // 0.25000
 //! }
 //! ```
 
@@ -103,6 +99,18 @@ impl<T> DualNumber<T> {
     /// Returns a mutable reference to the dual part
     #[inline]
     pub fn dual_mut(&mut self) -> &mut T { &mut self.1 }
+
+    /// Convenience method to take a closure (or any function) that can operate on the dual number in place
+    #[inline(always)]
+    pub fn map<F>(self, mapper: F) -> Self where F: Fn(DualNumber<T>) -> DualNumber<T> {
+        mapper(self)
+    }
+
+    /// Convenience method to take a closure (or any function) that can operate on the dual number parts in place
+    #[inline(always)]
+    pub fn map_parts<F>(self, mapper: F) -> Self where F: Fn(T, T) -> DualNumber<T> {
+        mapper(self.0, self.1)
+    }
 }
 
 impl<T: Zero> From<T> for DualNumber<T> {

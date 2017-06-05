@@ -17,14 +17,10 @@ extern crate dual_num;
 
 use dual_num::{DualNumber, Float, differentiate};
 
-fn test<F: Float>(x: F) -> F {
-    x.sqrt() + F::from(1.0).unwrap()
-}
-
 fn main() {
     // find partial derivative at x=4.0
-    let result = differentiate(4.0f64, test);
-
-    println!("{:.5}", result); // 0.25000
+    println!("{:.5}", differentiate(4.0f64, |x| {
+        x.sqrt() + DualNumber::from_real(1.0)
+    })); // 0.25000
 }
 ```
