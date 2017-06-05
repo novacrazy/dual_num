@@ -41,7 +41,9 @@ use std::cmp::Ordering;
 use std::num::FpCategory;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-pub use num_traits::{One, Zero, Float, FloatConst, Num, NumCast, ToPrimitive};
+pub use num_traits::{One, Zero, Float, FloatConst, Num};
+
+use num_traits::{Signed, Unsigned, NumCast, ToPrimitive, FromPrimitive};
 
 /// Dual Number structure
 ///
@@ -61,17 +63,23 @@ pub type DualNumberF32 = DualNumber<f32>;
 pub type DualNumberF64 = DualNumber<f64>;
 
 /// Evaluates the function using dual numbers to get the partial derivative at the input point
-pub fn differentiate<T: Float, F>(x: T, f: F) -> T where F: Fn(DualNumber<T>) -> DualNumber<T> {
+pub fn differentiate<T: One + Copy, F>(x: T, f: F) -> T where F: Fn(DualNumber<T>) -> DualNumber<T> {
     f(DualNumber::new(x, T::one())).dual()
 }
 
 impl<T> DualNumber<T> {
     /// Create a new dual number from its real and dual parts.
-    ///
-    /// Use `from_real` to create a dual number from only the real component.
     #[inline]
     pub fn new(real: T, dual: T) -> DualNumber<T> {
         DualNumber(real, dual)
+    }
+
+    /// Create a new dual number from a real number.
+    ///
+    /// The dual part is set to zero.
+    #[inline]
+    pub fn from_real(real: T) -> DualNumber<T> where T: Zero {
+        DualNumber::new(real, T::zero())
     }
 
     /// Returns both real and dual parts as a tuple
@@ -80,6 +88,14 @@ impl<T> DualNumber<T> {
         (self.0, self.1)
     }
 
+    /// Returns a reference to the real part
+    #[inline]
+    pub fn real_ref(&self) -> &T { &self.0 }
+
+    /// Returns a reference to the dual part
+    #[inline]
+    pub fn dual_ref(&self) -> &T { &self.1 }
+
     /// Returns a mutable reference to the real part
     #[inline]
     pub fn real_mut(&mut self) -> &mut T { &mut self.0 }
@@ -87,6 +103,12 @@ impl<T> DualNumber<T> {
     /// Returns a mutable reference to the dual part
     #[inline]
     pub fn dual_mut(&mut self) -> &mut T { &mut self.1 }
+}
+
+impl<T: Zero> From<T> for DualNumber<T> {
+    fn from(real: T) -> DualNumber<T> {
+        DualNumber::from_real(real)
+    }
 }
 
 impl<T: Copy> DualNumber<T> {
@@ -100,14 +122,6 @@ impl<T: Copy> DualNumber<T> {
 }
 
 impl<T: Float> DualNumber<T> {
-    /// Create a new dual number from a real number.
-    ///
-    /// The dual part is set to zero.
-    #[inline]
-    pub fn from_real(real: T) -> DualNumber<T> {
-        DualNumber::new(real, T::zero())
-    }
-
     /// Returns the conjugate of the dual number.
     pub fn conjugate(self) -> Self {
         DualNumber(self.real(), self.dual().neg())
@@ -130,7 +144,7 @@ impl<T: PartialEq> PartialEq<Self> for DualNumber<T> {
 
 impl<T: PartialOrd> PartialOrd<Self> for DualNumber<T> {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
-        PartialOrd::partial_cmp(&self.0, &rhs.0)
+        PartialOrd::partial_cmp(self.real_ref(), rhs.real_ref())
     }
 
     fn lt(&self, rhs: &Self) -> bool { self.0 < rhs.0 }
@@ -147,7 +161,7 @@ impl<T: PartialEq> PartialEq<T> for DualNumber<T> {
 
 impl<T: PartialOrd> PartialOrd<T> for DualNumber<T> {
     fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
-        PartialOrd::partial_cmp(&self.0, rhs)
+        PartialOrd::partial_cmp(self.real_ref(), rhs)
     }
 
     fn lt(&self, rhs: &T) -> bool { self.0 < *rhs }
@@ -168,11 +182,41 @@ macro_rules! impl_to_primitive {
     }
 }
 
-impl_to_primitive!(to_isize, isize, to_i8, i8, to_i16, i16, to_i32, i32, to_i64, i64,
-                   to_usize, usize, to_u8, u8, to_u16, u16, to_u32, u32, to_u64, u64,
-                   to_f32, f32, to_f64, f64);
+macro_rules! impl_from_primitive {
+    ($($name:ident, $ty:ty),*) => {
+        impl<T: FromPrimitive> FromPrimitive for DualNumber<T> where T: Zero {
+            $(
+                fn $name(n: $ty) -> Option<DualNumber<T>> {
+                    T::$name(n).map(DualNumber::from_real)
+                }
+            )*
+        }
+    }
+}
 
-impl<T: Float> Add<T> for DualNumber<T> {
+macro_rules! impl_primitive_cast {
+    ($($to:ident, $from:ident - $ty:ty),*) => {
+        impl_to_primitive!($($to, $ty),*);
+        impl_from_primitive!($($from, $ty),*);
+    }
+}
+
+impl_primitive_cast!(
+    to_isize,   from_isize  - isize,
+    to_i8,      from_i8     - i8,
+    to_i16,     from_i16    - i16,
+    to_i32,     from_i32    - i32,
+    to_i64,     from_i64    - i64,
+    to_usize,   from_usize  - usize,
+    to_u8,      from_u8     - u8,
+    to_u16,     from_u16    - u16,
+    to_u32,     from_u32    - u32,
+    to_u64,     from_u64    - u64,
+    to_f32,     from_f32    - f32,
+    to_f64,     from_f64    - f64
+);
+
+impl<T: Num + Copy> Add<T> for DualNumber<T> {
     type Output = DualNumber<T>;
 
     #[inline]
@@ -182,7 +226,7 @@ impl<T: Float> Add<T> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Sub<T> for DualNumber<T> {
+impl<T: Num + Copy> Sub<T> for DualNumber<T> {
     type Output = DualNumber<T>;
 
     #[inline]
@@ -192,7 +236,7 @@ impl<T: Float> Sub<T> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Mul<T> for DualNumber<T> {
+impl<T: Num + Copy> Mul<T> for DualNumber<T> {
     type Output = DualNumber<T>;
 
     fn mul(self, rhs: T) -> DualNumber<T> {
@@ -200,7 +244,7 @@ impl<T: Float> Mul<T> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Div<T> for DualNumber<T> {
+impl<T: Num + Copy> Div<T> for DualNumber<T> {
     type Output = DualNumber<T>;
 
     #[inline]
@@ -209,7 +253,7 @@ impl<T: Float> Div<T> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Neg for DualNumber<T> {
+impl<T: Signed + Copy> Neg for DualNumber<T> {
     type Output = Self;
 
     #[inline]
@@ -219,7 +263,7 @@ impl<T: Float> Neg for DualNumber<T> {
     }
 }
 
-impl<T: Float> Add<Self> for DualNumber<T> {
+impl<T: Num + Copy> Add<Self> for DualNumber<T> {
     type Output = Self;
 
     #[inline]
@@ -229,7 +273,7 @@ impl<T: Float> Add<Self> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Sub<Self> for DualNumber<T> {
+impl<T: Num + Copy> Sub<Self> for DualNumber<T> {
     type Output = Self;
 
     #[inline]
@@ -239,7 +283,7 @@ impl<T: Float> Sub<Self> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Mul<Self> for DualNumber<T> {
+impl<T: Num + Copy> Mul<Self> for DualNumber<T> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
@@ -250,7 +294,7 @@ impl<T: Float> Mul<Self> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Div<Self> for DualNumber<T> {
+impl<T: Num + Copy> Div<Self> for DualNumber<T> {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
@@ -261,7 +305,7 @@ impl<T: Float> Div<Self> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Rem<Self> for DualNumber<T> {
+impl<T: Num + Copy> Rem<Self> for DualNumber<T> {
     type Output = Self;
 
     /// **UNIMPLEMENTED!!!**
@@ -273,9 +317,41 @@ impl<T: Float> Rem<Self> for DualNumber<T> {
     }
 }
 
-impl<T: Float> Zero for DualNumber<T> {
+impl<T> Signed for DualNumber<T> where T: Signed + Copy + PartialOrd {
     #[inline]
-    fn zero() -> Self {
+    fn abs(&self) -> Self {
+        DualNumber::new(self.real().abs(), self.dual() * self.real().signum())
+    }
+
+    fn abs_sub(&self, rhs: &Self) -> Self {
+        if self.real() > rhs.real() {
+            DualNumber::new(self.real() - rhs.real(), self.sub(*rhs).dual())
+        } else {
+            Self::zero()
+        }
+    }
+
+    #[inline]
+    fn signum(&self) -> Self {
+        DualNumber::from_real(self.real().signum())
+    }
+
+    #[inline(always)]
+    fn is_positive(&self) -> bool {
+        self.real().is_positive()
+    }
+
+    #[inline(always)]
+    fn is_negative(&self) -> bool {
+        self.real().is_negative()
+    }
+}
+
+impl<T: Unsigned> Unsigned for DualNumber<T> where Self: Num {}
+
+impl<T: Num + Zero + Copy> Zero for DualNumber<T> {
+    #[inline]
+    fn zero() -> DualNumber<T> {
         DualNumber::new(T::zero(), T::zero())
     }
 
@@ -285,24 +361,24 @@ impl<T: Float> Zero for DualNumber<T> {
     }
 }
 
-impl<T: Float> One for DualNumber<T> {
+impl<T: Num + One + Copy> One for DualNumber<T> {
     #[inline]
-    fn one() -> Self {
+    fn one() -> DualNumber<T> {
         DualNumber::new(T::one(), T::zero())
     }
 }
 
-impl<T: Float> Num for DualNumber<T> {
+impl<T: Num + Copy> Num for DualNumber<T> {
     type FromStrRadixErr = <T as Num>::FromStrRadixErr;
 
-    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+    fn from_str_radix(str: &str, radix: u32) -> Result<DualNumber<T>, Self::FromStrRadixErr> {
         <T as Num>::from_str_radix(str, radix).map(DualNumber::from_real)
     }
 }
 
 impl<T: Float> NumCast for DualNumber<T> {
     #[inline]
-    fn from<N: ToPrimitive>(n: N) -> Option<Self> {
+    fn from<N: ToPrimitive>(n: N) -> Option<DualNumber<T>> {
         <T as NumCast>::from(n).map(DualNumber::from_real)
     }
 }
@@ -311,12 +387,12 @@ macro_rules! impl_float_const {
     ($($c:ident),*) => {
         $(
             #[inline(always)]
-            fn $c() -> Self { DualNumber::from_real(T::$c()) }
+            fn $c() -> DualNumber<T> { DualNumber::from_real(T::$c()) }
         )*
     }
 }
 
-impl<T: Float + FloatConst> FloatConst for DualNumber<T> {
+impl<T: FloatConst + Zero> FloatConst for DualNumber<T> {
     impl_float_const!(
         E,
         FRAC_1_PI,
@@ -363,12 +439,14 @@ macro_rules! impl_boolean_op {
 
 macro_rules! impl_real_op {
     ($($op:ident),*) => {
-        #[inline]
-        $(fn $op(self) -> Self { DualNumber::new(self.real().$op(), T::zero()) })*
+        $(
+            #[inline]
+            fn $op(self) -> Self { DualNumber::new(self.real().$op(), T::zero()) }
+        )*
     }
 }
 
-impl<T: Float> Float for DualNumber<T> {
+impl<T> Float for DualNumber<T> where T: Float + Signed + FloatConst {
     impl_real_constant!(
         nan,
         infinity,
@@ -404,10 +482,12 @@ impl<T: Float> Float for DualNumber<T> {
         DualNumber::new(self.real().fract(), self.dual())
     }
 
+    #[inline]
     fn signum(self) -> Self {
         DualNumber::from_real(self.real().signum())
     }
 
+    #[inline]
     fn abs(self) -> Self {
         DualNumber::new(self.real().abs(), self.dual() * self.real().signum())
     }
@@ -460,11 +540,9 @@ impl<T: Float> Float for DualNumber<T> {
     }
 
     fn exp2(self) -> Self {
-        let ln_2 = <T as NumCast>::from(::std::f64::consts::LN_2).expect("Invalid cast from f64");
-
         let real = self.real().exp2();
 
-        DualNumber::new(real, self.dual() * ln_2 * real)
+        DualNumber::new(real, self.dual() * T::LN_2() * real)
     }
 
     fn ln(self) -> Self {
@@ -478,16 +556,12 @@ impl<T: Float> Float for DualNumber<T> {
 
     #[inline]
     fn log2(self) -> Self {
-        let ln_2 = <T as NumCast>::from(::std::f64::consts::LN_2).expect("Invalid cast from f64");
-
-        DualNumber::new(self.real().log10(), self.dual() / (self.real() * ln_2))
+        DualNumber::new(self.real().log10(), self.dual() / (self.real() * T::LN_2()))
     }
 
     #[inline]
     fn log10(self) -> Self {
-        let ln_10 = <T as NumCast>::from(::std::f64::consts::LN_10).expect("Invalid cast from f64");
-
-        DualNumber::new(self.real().log10(), self.dual() / (self.real() * ln_10))
+        DualNumber::new(self.real().log10(), self.dual() / (self.real() * T::LN_10()))
     }
 
     #[inline]
