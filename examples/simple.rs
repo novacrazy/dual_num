@@ -2,10 +2,10 @@ extern crate dual_num;
 
 use std::io::Read;
 
-use dual_num::{DualNumber, Float, differentiate};
+use dual_num::{DualNumber, Float, FloatConst, differentiate};
 
-fn test<F: Float>(x: F) -> F {
-    x.sqrt() + F::from(1.0).unwrap()
+fn test<F: Float + FloatConst>(x: F) -> F {
+    x.sqrt() + F::LN_2()
 }
 
 fn main() {
