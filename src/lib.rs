@@ -41,7 +41,7 @@ use std::cmp::Ordering;
 use std::num::FpCategory;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-pub use num_traits::{One, Zero, Float, Num, NumCast, ToPrimitive};
+pub use num_traits::{One, Zero, Float, FloatConst, Num, NumCast, ToPrimitive};
 
 /// Dual Number structure
 ///
@@ -49,36 +49,24 @@ pub use num_traits::{One, Zero, Float, Num, NumCast, ToPrimitive};
 /// it only compares the real part.
 ///
 /// Additionally, `min` and `max` only compare the real parts, and keep the dual parts.
+///
+/// Lastly, the `Rem` remainder operator is not correctly or fully defined for `DualNumber`, and will panic.
 #[derive(Debug, Clone, Copy)]
-pub struct DualNumber<T: Float>(T, T);
+pub struct DualNumber<T>(T, T);
 
 /// Evaluates the function using dual numbers to get the partial derivative at the input point
 pub fn differentiate<T: Float, F>(x: T, f: F) -> T where F: Fn(DualNumber<T>) -> DualNumber<T> {
     f(DualNumber::new(x, T::one())).dual()
 }
 
-impl<T: Float> DualNumber<T> {
-    /// Create a new dual number from its real and dual parts
+impl<T> DualNumber<T> {
+    /// Create a new dual number from its real and dual parts.
+    ///
+    /// Use `from_real` to create a dual number from only the real component.
     #[inline]
     pub fn new(real: T, dual: T) -> DualNumber<T> {
         DualNumber(real, dual)
     }
-
-    /// Create a new dual number from a real number.
-    ///
-    /// The dual part is set to zero.
-    #[inline]
-    pub fn from_real(real: T) -> DualNumber<T> {
-        DualNumber::new(real, T::zero())
-    }
-
-    /// Returns the real part
-    #[inline(always)]
-    pub fn real(&self) -> T { self.0 }
-
-    /// Returns the dual part
-    #[inline(always)]
-    pub fn dual(&self) -> T { self.1 }
 
     /// Returns both real and dual parts as a tuple
     #[inline]
@@ -93,6 +81,26 @@ impl<T: Float> DualNumber<T> {
     /// Returns a mutable reference to the dual part
     #[inline]
     pub fn dual_mut(&mut self) -> &mut T { &mut self.1 }
+}
+
+impl<T: Copy> DualNumber<T> {
+    /// Returns the real part
+    #[inline(always)]
+    pub fn real(&self) -> T { self.0 }
+
+    /// Returns the dual part
+    #[inline(always)]
+    pub fn dual(&self) -> T { self.1 }
+}
+
+impl<T: Float> DualNumber<T> {
+    /// Create a new dual number from a real number.
+    ///
+    /// The dual part is set to zero.
+    #[inline]
+    pub fn from_real(real: T) -> DualNumber<T> {
+        DualNumber::new(real, T::zero())
+    }
 
     /// Returns the conjugate of the dual number.
     pub fn conjugate(self) -> Self {
@@ -100,54 +108,54 @@ impl<T: Float> DualNumber<T> {
     }
 }
 
-impl<T: Float> Display for DualNumber<T> where T: Display {
+impl<T: Display> Display for DualNumber<T> {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         let precision = f.precision().unwrap_or(2);
 
-        write!(f, "{:.p$} + \u{03B5}{:.p$}", self.real(), self.dual(), p = precision)
+        write!(f, "{:.p$} + \u{03B5}{:.p$}", self.0, self.1, p = precision)
     }
 }
 
-impl<T: Float> PartialEq<Self> for DualNumber<T> {
+impl<T: PartialEq> PartialEq<Self> for DualNumber<T> {
     fn eq(&self, rhs: &Self) -> bool {
         self.0 == rhs.0
     }
 }
 
-impl<T: Float> PartialOrd<Self> for DualNumber<T> {
+impl<T: PartialOrd> PartialOrd<Self> for DualNumber<T> {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
         PartialOrd::partial_cmp(&self.0, &rhs.0)
     }
 
-    fn lt(&self, rhs: &Self) -> bool { self.real() < rhs.real() }
-    fn le(&self, rhs: &Self) -> bool { self.real() <= rhs.real() }
-    fn gt(&self, rhs: &Self) -> bool { self.real() > rhs.real() }
-    fn ge(&self, rhs: &Self) -> bool { self.real() >= rhs.real() }
+    fn lt(&self, rhs: &Self) -> bool { self.0 < rhs.0 }
+    fn le(&self, rhs: &Self) -> bool { self.0 <= rhs.0 }
+    fn gt(&self, rhs: &Self) -> bool { self.0 > rhs.0 }
+    fn ge(&self, rhs: &Self) -> bool { self.0 >= rhs.0 }
 }
 
-impl<T: Float> PartialEq<T> for DualNumber<T> {
+impl<T: PartialEq> PartialEq<T> for DualNumber<T> {
     fn eq(&self, rhs: &T) -> bool {
         self.0 == *rhs
     }
 }
 
-impl<T: Float> PartialOrd<T> for DualNumber<T> {
+impl<T: PartialOrd> PartialOrd<T> for DualNumber<T> {
     fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
         PartialOrd::partial_cmp(&self.0, rhs)
     }
 
-    fn lt(&self, rhs: &T) -> bool { self.real() < *rhs }
-    fn le(&self, rhs: &T) -> bool { self.real() <= *rhs }
-    fn gt(&self, rhs: &T) -> bool { self.real() > *rhs }
-    fn ge(&self, rhs: &T) -> bool { self.real() >= *rhs }
+    fn lt(&self, rhs: &T) -> bool { self.0 < *rhs }
+    fn le(&self, rhs: &T) -> bool { self.0 <= *rhs }
+    fn gt(&self, rhs: &T) -> bool { self.0 > *rhs }
+    fn ge(&self, rhs: &T) -> bool { self.0 >= *rhs }
 }
 
 macro_rules! impl_to_primitive {
     ($($name:ident, $ty:ty),*) => {
-        impl<T: Float> ToPrimitive for DualNumber<T> {
+        impl<T: ToPrimitive> ToPrimitive for DualNumber<T> {
             $(
                 fn $name(&self) -> Option<$ty> {
-                    self.real().$name()
+                    (self.0).$name()
                 }
             )*
         }
@@ -282,17 +290,45 @@ impl<T: Float> Num for DualNumber<T> {
     type FromStrRadixErr = <T as Num>::FromStrRadixErr;
 
     fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
-        <T as Num>::from_str_radix(str, radix)
-            .map(DualNumber::from_real)
+        <T as Num>::from_str_radix(str, radix).map(DualNumber::from_real)
     }
 }
 
 impl<T: Float> NumCast for DualNumber<T> {
     #[inline]
     fn from<N: ToPrimitive>(n: N) -> Option<Self> {
-        <T as NumCast>::from(n)
-            .map(DualNumber::from_real)
+        <T as NumCast>::from(n).map(DualNumber::from_real)
     }
+}
+
+macro_rules! impl_float_const {
+    ($($c:ident),*) => {
+        $(
+            #[inline(always)]
+            fn $c() -> Self { DualNumber::from_real(T::$c()) }
+        )*
+    }
+}
+
+impl<T: Float + FloatConst> FloatConst for DualNumber<T> {
+    impl_float_const!(
+        E,
+        FRAC_1_PI,
+        FRAC_1_SQRT_2,
+        FRAC_2_PI,
+        FRAC_2_SQRT_PI,
+        FRAC_PI_2,
+        FRAC_PI_3,
+        FRAC_PI_4,
+        FRAC_PI_6,
+        FRAC_PI_8,
+        LN_10,
+        LN_2,
+        LOG10_E,
+        LOG2_E,
+        PI,
+        SQRT_2
+    );
 }
 
 macro_rules! impl_real_constant {
