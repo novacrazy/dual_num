@@ -3,10 +3,11 @@ authors = ["Aaron Trent <novacrazy@gmail.com>"]
 description = "Dual Number Implementation combined from multiple other implementations"
 license = "MIT"
 name = "dual_num"
-version = "0.1.0"
+version = "0.1.1"
 include = ["src/**/*", "Cargo.toml"]
 keywords = ["dual", "number"]
 readme = "README.md"
+documentation = "https://docs.rs/dual_num/"
 repository = "https://github.com/novacrazy/dual_num"
 
 [dependencies]
