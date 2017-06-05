@@ -54,6 +54,12 @@ pub use num_traits::{One, Zero, Float, FloatConst, Num, NumCast, ToPrimitive};
 #[derive(Debug, Clone, Copy)]
 pub struct DualNumber<T>(T, T);
 
+/// Convenience type
+pub type DualNumberF32 = DualNumber<f32>;
+
+/// Convenience type
+pub type DualNumberF64 = DualNumber<f64>;
+
 /// Evaluates the function using dual numbers to get the partial derivative at the input point
 pub fn differentiate<T: Float, F>(x: T, f: F) -> T where F: Fn(DualNumber<T>) -> DualNumber<T> {
     f(DualNumber::new(x, T::one())).dual()
