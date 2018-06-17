@@ -1,0 +1,50 @@
+extern crate nalgebra as na;
+
+use self::na::allocator::Allocator;
+use self::na::{DefaultAllocator, DimName, MatrixMN, Real, VectorN};
+use super::{Dual, Num, One};
+
+/// Evaluates the function using dual numbers to get the partial derivative at the input point
+pub fn differentiate<T: One + Copy, F>(x: T, f: F) -> T
+where
+    F: Fn(Dual<T>) -> Dual<T>,
+{
+    f(Dual::new(x, T::one())).dual()
+}
+
+pub fn nabla_t<T: Real + Num, N: DimName, F>(t: T, x: VectorN<T, N>, f: F) -> MatrixMN<T, N, N>
+where
+    F: Fn(T, &VectorN<Dual<T>, N>) -> VectorN<Dual<T>, N>,
+    DefaultAllocator: Allocator<Dual<T>, N>
+        + Allocator<Dual<T>, N, N>
+        + Allocator<usize, N>
+        + Allocator<T, N>
+        + Allocator<T, N, N>,
+{
+    let mut grad_as_slice = Vec::with_capacity(N::dim() * N::dim());
+    // "Simulate" a hyperdual space of size N::dim()
+    for v_i in 0..N::dim() {
+        let mut dual_x = VectorN::<Dual<T>, N>::zeros();
+        for i in 0..N::dim() {
+            dual_x[(i, 0)] = Dual::new(x[(i, 0)], if v_i == i { T::one() } else { T::zero() });
+        }
+        let df_di = f(t, &dual_x);
+        for i in 0..N::dim() {
+            grad_as_slice.push(df_di[(i, 0)].dual());
+        }
+    }
+    MatrixMN::<T, N, N>::from_column_slice(&grad_as_slice)
+}
+
+pub fn nabla<T: Real + Num, N: DimName, F>(x: VectorN<T, N>, f: F) -> MatrixMN<T, N, N>
+where
+    F: Fn(&VectorN<Dual<T>, N>) -> VectorN<Dual<T>, N>,
+    DefaultAllocator: Allocator<Dual<T>, N>
+        + Allocator<Dual<T>, N, N>
+        + Allocator<usize, N>
+        + Allocator<T, N>
+        + Allocator<T, N, N>,
+{
+    let f0 = |_t: T, x: &VectorN<Dual<T>, N>| f(x);
+    nabla_t(T::zero(), x, f0)
+}

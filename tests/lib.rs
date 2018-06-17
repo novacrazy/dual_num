@@ -4,15 +4,29 @@ extern crate nalgebra as na;
 use hyperdual::{differentiate, nabla, nabla_t, Dual, Float, FloatConst};
 use na::{Matrix6, U3, Vector3, Vector6};
 
+macro_rules! abs_within {
+    ($x:expr, $val:expr, $eps:expr, $msg:expr) => {
+        assert!(($x - $val).abs() < $eps, $msg)
+    };
+}
+
+macro_rules! zero_within {
+    ($x:expr, $eps:expr, $msg:expr) => {
+        assert!($x.abs() < $eps, $msg)
+    };
+}
+
 #[test]
-fn main() {
-    println!(
-        "{:.5}",
-        differentiate(4.0f64, |x| x.sqrt() + Dual::from_real(1.0))
+fn derive() {
+    abs_within!(
+        differentiate(4.0f64, |x| x.sqrt() + Dual::from_real(1.0)),
+        1.0 / 4.0,
+        std::f64::EPSILON,
+        "incorrect norm"
     );
 
     println!(
-        "{:.5}",
+        "{:.16}",
         differentiate(1.0f64, |x| {
             let one = Dual::from_real(1.0); // Or use the One trait
 
@@ -25,7 +39,19 @@ fn main() {
         Dual::new(0.25f32, 1.0).map(|x| (x * Dual::PI()).sin())
     );
 
-    println!("{:.5}", Dual::new(2i32, 1).map(|x| x * x + x));
+    let x = Dual::new(2i32, 1).map(|x| x * x + x);
+    assert_eq!(x.real(), 6i32, "incorrect real");
+    assert_eq!(x.dual(), 5i32, "incorrect real");
+}
+
+#[test]
+fn norms() {
+    let vec = Vector3::new(
+        Dual::from_real(1.0),
+        Dual::from_real(1.0),
+        Dual::from_real(1.0),
+    );
+    // abs_within!(vec.norm(), 1.0, std::f64::EPSILON, "incorrect norm");
 }
 
 #[test]
@@ -69,8 +95,9 @@ fn gradient_no_param() {
     expected[(4, 2)] = 0.00000003165839212196757;
     expected[(5, 2)] = -0.000000026624873075335538;
 
-    assert!(
-        (grad - expected).norm().abs() < 1e-16,
+    zero_within!(
+        (grad - expected).norm(),
+        1e-16,
         "gradient computation is incorrect"
     );
 }
@@ -116,8 +143,9 @@ fn gradient_with_param() {
     expected[(4, 2)] = 0.00000003165839212196757;
     expected[(5, 2)] = -0.000000026624873075335538;
 
-    assert!(
-        (grad - expected).norm().abs() < 1e-16,
+    zero_within!(
+        (grad - expected).norm(),
+        1e-16,
         "gradient computation is incorrect"
     );
 }

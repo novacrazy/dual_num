@@ -30,17 +30,18 @@
 // Also, for clarity I've avoiding using .0 and .1 outside of the struct impl.
 // They're even made private to encourage using .real() and .dual() instead.
 
-extern crate nalgebra as na;
 extern crate num_traits;
 
-use na::allocator::Allocator;
-use na::{DefaultAllocator, DimName, MatrixMN, Scalar, VectorN};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::num::FpCategory;
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 pub use num_traits::{Float, FloatConst, Num, One, Zero};
+
+// Re-export the differential functions
+mod differentials;
+pub use differentials::*;
 
 use num_traits::{FromPrimitive, NumCast, Signed, ToPrimitive, Unsigned};
 
@@ -54,51 +55,6 @@ use num_traits::{FromPrimitive, NumCast, Signed, ToPrimitive, Unsigned};
 /// Lastly, the `Rem` remainder operator is not correctly or fully defined for `Dual`, and will panic.
 #[derive(Debug, Clone, Copy)]
 pub struct Dual<T>(T, T);
-
-/// Evaluates the function using dual numbers to get the partial derivative at the input point
-pub fn differentiate<T: One + Copy, F>(x: T, f: F) -> T
-where
-    F: Fn(Dual<T>) -> Dual<T>,
-{
-    f(Dual::new(x, T::one())).dual()
-}
-
-pub fn nabla_t<T: Scalar + Num, N: DimName, F>(t: T, x: VectorN<T, N>, f: F) -> MatrixMN<T, N, N>
-where
-    F: Fn(T, &VectorN<Dual<T>, N>) -> VectorN<Dual<T>, N>,
-    DefaultAllocator: Allocator<Dual<T>, N>
-        + Allocator<Dual<T>, N, N>
-        + Allocator<usize, N>
-        + Allocator<T, N>
-        + Allocator<T, N, N>,
-{
-    let mut grad_as_slice = Vec::with_capacity(N::dim() * N::dim());
-    // "Simulate" a hyperdual space of size N::dim()
-    for v_i in 0..N::dim() {
-        let mut dual_x = VectorN::<Dual<T>, N>::zeros();
-        for i in 0..N::dim() {
-            dual_x[(i, 0)] = Dual::new(x[(i, 0)], if v_i == i { T::one() } else { T::zero() });
-        }
-        let df_di = f(t, &dual_x);
-        for i in 0..N::dim() {
-            grad_as_slice.push(df_di[(i, 0)].dual());
-        }
-    }
-    MatrixMN::<T, N, N>::from_column_slice(&grad_as_slice)
-}
-
-pub fn nabla<T: Scalar + Num, N: DimName, F>(x: VectorN<T, N>, f: F) -> MatrixMN<T, N, N>
-where
-    F: Fn(&VectorN<Dual<T>, N>) -> VectorN<Dual<T>, N>,
-    DefaultAllocator: Allocator<Dual<T>, N>
-        + Allocator<Dual<T>, N, N>
-        + Allocator<usize, N>
-        + Allocator<T, N>
-        + Allocator<T, N, N>,
-{
-    let f0 = |_t: T, x: &VectorN<Dual<T>, N>| f(x);
-    nabla_t(T::zero(), x, f0)
-}
 
 impl<T> Dual<T> {
     /// Create a new dual number from its real and dual parts.
