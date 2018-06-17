@@ -1,14 +1,15 @@
 [package]
-authors = ["Aaron Trent <novacrazy@gmail.com>"]
-description = "Dual Number Implementation combined from multiple other implementations"
-license = "MIT"
-name = "dual_num"
-version = "0.1.1"
-include = ["src/**/*", "Cargo.toml"]
-keywords = ["dual", "number"]
+authors = ["Aaron Trent <novacrazy@gmail.com>", "Christopher Rabotin <christopher.rabotin@gmail.com>"]
+description = "Dual Number Implementation for automatic differentiation for multivariate vectorial functions into gradients"
+license = "Apache-2.0"
+name = "hyperdual"
+version = "0.0.1"
+keywords = ["dual", "number", "hyperdual", "gradient", "autodifferentiate"]
 readme = "README.md"
-documentation = "https://docs.rs/dual_num/"
-repository = "https://github.com/novacrazy/dual_num"
+documentation = "https://docs.rs/hyperdual/"
+repository = "https://github.com/novacrazy/hyperdual"
+publish = false # For now
 
 [dependencies]
-num-traits = "0.1.37"
+num-traits = "0.2"
+nalgebra = "0.15"
