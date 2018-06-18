@@ -7,7 +7,7 @@ This is a dual number implementation scavenged from other dual number libraries 
 * [https://github.com/ibab/rust-ad](https://github.com/ibab/rust-ad)
 * [https://github.com/tesch1/cxxduals](https://github.com/tesch1/cxxduals)
 
-The difference being is that I have checked each method against Wolfram Alpha for correctness and will 
+The difference being is that I have checked each method against Wolfram Alpha for correctness and will
 keep this implementation up to date and working with the latest stable Rust and `num-traits` crate.
 
 ## Usage
@@ -20,7 +20,7 @@ use dual_num::{DualNumber, Float, differentiate};
 fn main() {
     // find partial derivative at x=4.0
     println!("{:.5}", differentiate(4.0f64, |x| {
-        x.sqrt() + DualNumber::from_real(1.0)
+        x.sqrt() + Dual::from_real(1.0)
     })); // 0.25000
 }
 ```

@@ -1,14 +1,10 @@
 extern crate dual_num;
 use dual_num::{differentiate, Dual, Float, FloatConst};
 
-#[cfg(feature = "gradient")]
 extern crate nalgebra as na;
 
-#[cfg(feature = "gradient")]
 use dual_num::linalg::norm;
-#[cfg(feature = "gradient")]
 use dual_num::{nabla, nabla_t};
-#[cfg(feature = "gradient")]
 use na::{Matrix6, U3, Vector3, Vector6};
 
 macro_rules! abs_within {
@@ -17,7 +13,6 @@ macro_rules! abs_within {
     };
 }
 
-#[cfg(feature = "gradient")]
 macro_rules! zero_within {
     ($x:expr, $eps:expr, $msg:expr) => {
         assert!($x.abs() < $eps, $msg)
@@ -42,47 +37,31 @@ fn derive() {
         })
     );
 
-    println!(
-        "{:.5}",
-        Dual::new(0.25f32, 1.0).map(|x| (x * Dual::PI()).sin())
-    );
+    println!("{:.5}", (Dual::new(0.25f32, 1.0) * Dual::PI()).sin());
 
-    let x = Dual::new(2i32, 1).map(|x| x * x + x);
+    let mut x = Dual::new(2i32, 1);
+
+    x = x * x + x;
+
     assert_eq!(x.real(), 6i32, "incorrect real");
     assert_eq!(x.dual(), 5i32, "incorrect real");
 }
 
-#[cfg(feature = "gradient")]
 #[test]
 fn test_norm() {
-    let vec = Vector3::new(
-        Dual::from_real(1.0),
-        Dual::from_real(1.0),
-        Dual::from_real(1.0),
-    );
+    let vec = Vector3::new(Dual::from_real(1.0), Dual::from_real(1.0), Dual::from_real(1.0));
     let this_norm = norm(&vec);
-    abs_within!(
-        this_norm.real(),
-        3.0f64.sqrt(),
-        std::f64::EPSILON,
-        "incorrect real part of the norm"
-    );
-    zero_within!(
-        this_norm.dual(),
-        std::f64::EPSILON,
-        "incorrect dual part of the norm"
-    );
+    abs_within!(this_norm.real(), 3.0f64.sqrt(), std::f64::EPSILON, "incorrect real part of the norm");
+    zero_within!(this_norm.dual(), std::f64::EPSILON, "incorrect dual part of the norm");
 }
 
-#[cfg(feature = "gradient")]
 #[test]
 fn gradient_no_param() {
     // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.
     fn eom(state: &Vector6<Dual<f64>>) -> Vector6<Dual<f64>> {
         let radius = state.fixed_rows::<U3>(0).into_owned();
         let velocity = state.fixed_rows::<U3>(3).into_owned();
-        let norm =
-            (radius[(0, 0)].powi(2) + radius[(1, 0)].powi(2) + radius[(2, 0)].powi(2)).sqrt();
+        let norm = (radius[(0, 0)].powi(2) + radius[(1, 0)].powi(2) + radius[(2, 0)].powi(2)).sqrt();
         let body_acceleration_f = Dual::from_real(-398_600.4415) / norm.powi(3);
         let body_acceleration = Vector3::new(
             radius[(0, 0)] * body_acceleration_f,
@@ -116,28 +95,23 @@ fn gradient_no_param() {
     expected[(4, 2)] = 0.00000003165839212196757;
     expected[(5, 2)] = -0.000000026624873075335538;
 
-    zero_within!(
-        (grad - expected).norm(),
-        1e-16,
-        "gradient computation is incorrect"
-    );
+    zero_within!((grad - expected).norm(), 1e-16, "gradient computation is incorrect");
 }
 
-#[cfg(feature = "gradient")]
 #[test]
 fn gradient_with_param() {
     // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.
     fn eom(_t: f64, state: &Vector6<Dual<f64>>) -> Vector6<Dual<f64>> {
         let radius = state.fixed_rows::<U3>(0).into_owned();
         let velocity = state.fixed_rows::<U3>(3).into_owned();
-        let norm =
-            (radius[(0, 0)].powi(2) + radius[(1, 0)].powi(2) + radius[(2, 0)].powi(2)).sqrt();
+        let norm = (radius[(0, 0)].powi(2) + radius[(1, 0)].powi(2) + radius[(2, 0)].powi(2)).sqrt();
         let body_acceleration_f = Dual::from_real(-398_600.4415) / norm.powi(3);
         let body_acceleration = Vector3::new(
             radius[(0, 0)] * body_acceleration_f,
             radius[(1, 0)] * body_acceleration_f,
             radius[(2, 0)] * body_acceleration_f,
         );
+
         Vector6::from_iterator(velocity.iter().chain(body_acceleration.iter()).cloned())
     }
 
@@ -149,9 +123,11 @@ fn gradient_with_param() {
         -2.226285193102822,
         1.6467383807226765,
     );
+
     let grad = nabla_t(0.0, state, eom);
 
     let mut expected = Matrix6::zeros();
+
     expected[(0, 3)] = 1.0;
     expected[(1, 4)] = 1.0;
     expected[(2, 5)] = 1.0;
@@ -165,9 +141,5 @@ fn gradient_with_param() {
     expected[(4, 2)] = 0.00000003165839212196757;
     expected[(5, 2)] = -0.000000026624873075335538;
 
-    zero_within!(
-        (grad - expected).norm(),
-        1e-16,
-        "gradient computation is incorrect"
-    );
+    zero_within!((grad - expected).norm(), 1e-16, "gradient computation is incorrect");
 }

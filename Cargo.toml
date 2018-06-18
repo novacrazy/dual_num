@@ -1,6 +1,6 @@
 [package]
-authors = ["Aaron Trent <novacrazy@gmail.com>"]
-description = "Dual Number Implementation combined from multiple other implementations"
+authors = ["Aaron Trent <novacrazy@gmail.com>", "Christopher Rabotin <christopher.rabotin@gmail.com>"]
+description = "Dual Number Implementation combined from multiple other implementations with optional support for automatic differentiation of multivariate vectorial functions into gradients"
 license = "MIT"
 name = "dual_num"
 version = "0.2.0"
@@ -12,8 +12,4 @@ repository = "https://github.com/novacrazy/dual_num"
 
 [dependencies]
 num-traits = "0.2"
-nalgebra = { version = "0.15", optional=true }
-
-[features]
-default = []
-gradient = ["nalgebra"]
+nalgebra = "0.15"
