@@ -1,7 +1,7 @@
-extern crate hyperdual;
+extern crate dual_num;
 extern crate nalgebra as na;
 
-use hyperdual::{differentiate, nabla, nabla_t, Dual, Float, FloatConst};
+use dual_num::{differentiate, nabla, nabla_t, Dual, Float, FloatConst};
 use na::{Matrix6, U3, Vector3, Vector6};
 
 macro_rules! abs_within {
