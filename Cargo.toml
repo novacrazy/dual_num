@@ -3,12 +3,17 @@ authors = ["Aaron Trent <novacrazy@gmail.com>"]
 description = "Dual Number Implementation combined from multiple other implementations"
 license = "MIT"
 name = "dual_num"
-version = "0.1.1"
+version = "0.2.0"
 include = ["src/**/*", "Cargo.toml"]
-keywords = ["dual", "number"]
+keywords = ["dual", "number", "hyperdual", "gradient", "autodifferentiate"]
 readme = "README.md"
 documentation = "https://docs.rs/dual_num/"
 repository = "https://github.com/novacrazy/dual_num"
 
 [dependencies]
-num-traits = "0.1.37"
+num-traits = "0.2"
+nalgebra = { version = "0.15", optional=true }
+
+[features]
+default = []
+gradient = ["nalgebra"]
