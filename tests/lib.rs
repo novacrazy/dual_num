@@ -1,6 +1,7 @@
 extern crate dual_num;
 extern crate nalgebra as na;
 
+use dual_num::linalg::norm;
 use dual_num::{differentiate, nabla, nabla_t, Dual, Float, FloatConst};
 use na::{Matrix6, U3, Vector3, Vector6};
 
@@ -44,16 +45,29 @@ fn derive() {
     assert_eq!(x.dual(), 5i32, "incorrect real");
 }
 
+#[cfg(feature = "gradient")]
 #[test]
-fn norms() {
+fn test_norm() {
     let vec = Vector3::new(
         Dual::from_real(1.0),
         Dual::from_real(1.0),
         Dual::from_real(1.0),
     );
-    // abs_within!(vec.norm(), 1.0, std::f64::EPSILON, "incorrect norm");
+    let this_norm = norm(&vec);
+    abs_within!(
+        this_norm.real(),
+        3.0f64.sqrt(),
+        std::f64::EPSILON,
+        "incorrect real part of the norm"
+    );
+    zero_within!(
+        this_norm.dual(),
+        std::f64::EPSILON,
+        "incorrect dual part of the norm"
+    );
 }
 
+#[cfg(feature = "gradient")]
 #[test]
 fn gradient_no_param() {
     // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.

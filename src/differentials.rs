@@ -10,6 +10,7 @@ where
     f(Dual::new(x, T::one())).dual()
 }
 
+#[cfg(feature = "gradient")]
 /// Computes the gradiant of the provided function with a preliminary time parameter.
 ///
 /// # How to read this signature:
@@ -39,6 +40,7 @@ where
     MatrixMN::<T, N, N>::from_column_slice(&grad_as_slice)
 }
 
+#[cfg(feature = "gradient")]
 /// Computes the gradiant of the provided function.
 ///
 /// # How to read this signature:

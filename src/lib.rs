@@ -45,8 +45,7 @@ mod differentials;
 pub use differentials::*;
 
 // Re-export the linear algebra helpers
-mod linalg;
-pub use linalg::*;
+pub mod linalg;
 
 use num_traits::{FromPrimitive, NumCast, Signed, ToPrimitive, Unsigned};
 
