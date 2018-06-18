@@ -12,14 +12,14 @@
 //! ## Usage
 //!
 //! ```rust
-//! extern crate dual_num;
+//! extern crate hyperdual;
 //!
-//! use dual_num::{DualNumber, Float, differentiate};
+//! use hyperdual::{Dual, Float, differentiate};
 //!
 //! fn main() {
 //!     // find partial derivative at x=4.0
 //!     println!("{:.5}", differentiate(4.0f64, |x| {
-//!         x.sqrt() + DualNumber::from_real(1.0)
+//!         x.sqrt() + Dual::from_real(1.0)
 //!     })); // 0.25000
 //! }
 //! ```
@@ -30,6 +30,7 @@
 // Also, for clarity I've avoiding using .0 and .1 outside of the struct impl.
 // They're even made private to encourage using .real() and .dual() instead.
 
+extern crate nalgebra as na;
 extern crate num_traits;
 
 use std::cmp::Ordering;
@@ -42,6 +43,10 @@ pub use num_traits::{Float, FloatConst, Num, One, Zero};
 // Re-export the differential functions
 mod differentials;
 pub use differentials::*;
+
+// Re-export the linear algebra helpers
+mod linalg;
+pub use linalg::*;
 
 use num_traits::{FromPrimitive, NumCast, Signed, ToPrimitive, Unsigned};
 
@@ -708,3 +713,5 @@ where
         Dual::from_real(self.real().to_radians())
     }
 }
+
+// impl<T: Real> Real for Dual<T> {}

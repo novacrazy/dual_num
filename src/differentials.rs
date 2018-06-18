@@ -1,7 +1,5 @@
-extern crate nalgebra as na;
-
-use self::na::allocator::Allocator;
-use self::na::{DefaultAllocator, DimName, MatrixMN, Real, VectorN};
+use super::na::allocator::Allocator;
+use super::na::{DefaultAllocator, DimName, MatrixMN, Real, VectorN};
 use super::{Dual, Num, One};
 
 /// Evaluates the function using dual numbers to get the partial derivative at the input point
@@ -12,6 +10,11 @@ where
     f(Dual::new(x, T::one())).dual()
 }
 
+/// Computes the gradiant of the provided function with a preliminary time parameter.
+///
+/// # How to read this signature:
+/// Let `t` be a parameter, `x` be a state vector and `f` be a function whose gradient is seeked.
+/// Calling `nabla` will return ∇f(t, x).
 pub fn nabla_t<T: Real + Num, N: DimName, F>(t: T, x: VectorN<T, N>, f: F) -> MatrixMN<T, N, N>
 where
     F: Fn(T, &VectorN<Dual<T>, N>) -> VectorN<Dual<T>, N>,
@@ -36,6 +39,11 @@ where
     MatrixMN::<T, N, N>::from_column_slice(&grad_as_slice)
 }
 
+/// Computes the gradiant of the provided function.
+///
+/// # How to read this signature:
+/// Let `x` be a state vector and `f` be a function whose gradient is seeked.
+/// Calling `nabla` will return ∇f(x).
 pub fn nabla<T: Real + Num, N: DimName, F>(x: VectorN<T, N>, f: F) -> MatrixMN<T, N, N>
 where
     F: Fn(&VectorN<Dual<T>, N>) -> VectorN<Dual<T>, N>,
