@@ -1,8 +1,14 @@
 extern crate dual_num;
+use dual_num::{differentiate, Dual, Float, FloatConst};
+
+#[cfg(feature = "gradient")]
 extern crate nalgebra as na;
 
+#[cfg(feature = "gradient")]
 use dual_num::linalg::norm;
-use dual_num::{differentiate, nabla, nabla_t, Dual, Float, FloatConst};
+#[cfg(feature = "gradient")]
+use dual_num::{nabla, nabla_t};
+#[cfg(feature = "gradient")]
 use na::{Matrix6, U3, Vector3, Vector6};
 
 macro_rules! abs_within {
@@ -11,6 +17,7 @@ macro_rules! abs_within {
     };
 }
 
+#[cfg(feature = "gradient")]
 macro_rules! zero_within {
     ($x:expr, $eps:expr, $msg:expr) => {
         assert!($x.abs() < $eps, $msg)
@@ -116,6 +123,7 @@ fn gradient_no_param() {
     );
 }
 
+#[cfg(feature = "gradient")]
 #[test]
 fn gradient_with_param() {
     // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.

@@ -1,6 +1,11 @@
+#[cfg(feature = "gradient")]
 use super::na::allocator::Allocator;
+#[cfg(feature = "gradient")]
 use super::na::{DefaultAllocator, DimName, MatrixMN, Real, VectorN};
-use super::{Dual, Num, One};
+use super::{Dual, One};
+
+#[cfg(feature = "gradient")]
+use super::Num;
 
 /// Evaluates the function using dual numbers to get the partial derivative at the input point
 pub fn differentiate<T: One + Copy, F>(x: T, f: F) -> T

@@ -12,9 +12,9 @@
 //! ## Usage
 //!
 //! ```rust
-//! extern crate hyperdual;
+//! extern crate dual_num;
 //!
-//! use hyperdual::{Dual, Float, differentiate};
+//! use dual_num::{Dual, Float, differentiate};
 //!
 //! fn main() {
 //!     // find partial derivative at x=4.0
@@ -29,7 +29,7 @@
 //
 // Also, for clarity I've avoiding using .0 and .1 outside of the struct impl.
 // They're even made private to encourage using .real() and .dual() instead.
-
+#[cfg(feature = "gradient")]
 extern crate nalgebra as na;
 extern crate num_traits;
 
@@ -44,7 +44,8 @@ pub use num_traits::{Float, FloatConst, Num, One, Zero};
 mod differentials;
 pub use differentials::*;
 
-// Re-export the linear algebra helpers
+// Export the linear algebra helpers
+#[cfg(feature = "gradient")]
 pub mod linalg;
 
 use num_traits::{FromPrimitive, NumCast, Signed, ToPrimitive, Unsigned};
