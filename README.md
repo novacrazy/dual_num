@@ -1,14 +1,7 @@
-dual_num
+dual_num [![Build Status](https://travis-ci.org/novacrazy/dual_num.svg?branch=master)](https://travis-ci.org/novacrazy/dual_num)
 ========
 
-This is a dual number implementation scavenged from other dual number libraries and articles around the web, including:
-
-* [https://github.com/FreeFull/dual_numbers](https://github.com/FreeFull/dual_numbers)
-* [https://github.com/ibab/rust-ad](https://github.com/ibab/rust-ad)
-* [https://github.com/tesch1/cxxduals](https://github.com/tesch1/cxxduals)
-
-The difference being is that I have checked each method against Wolfram Alpha for correctness and will
-keep this implementation up to date and working with the latest stable Rust and `num-traits` crate.
+Fully-featured Dual Number implementation with features for automatic differentiation of multivariate vectorial functions into gradients.
 
 ## Usage
 
@@ -24,3 +17,8 @@ fn main() {
     })); // 0.25000
 }
 ```
+
+##### Previous Work
+* [https://github.com/FreeFull/dual_numbers](https://github.com/FreeFull/dual_numbers)
+* [https://github.com/ibab/rust-ad](https://github.com/ibab/rust-ad)
+* [https://github.com/tesch1/cxxduals](https://github.com/tesch1/cxxduals)

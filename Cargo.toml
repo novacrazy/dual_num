@@ -1,9 +1,9 @@
 [package]
-authors = ["Aaron Trent <novacrazy@gmail.com>", "Christopher Rabotin <christopher.rabotin@gmail.com>"]
-description = "Dual Number Implementation combined from multiple other implementations with optional support for automatic differentiation of multivariate vectorial functions into gradients"
-license = "MIT"
 name = "dual_num"
+description = "Fully-featured Dual Number implementation with features for automatic differentiation of multivariate vectorial functions into gradients"
+authors = ["Aaron Trent <novacrazy@gmail.com>", "Christopher Rabotin <christopher.rabotin@gmail.com>"]
 version = "0.2.0"
+license = "MIT"
 include = ["src/**/*", "Cargo.toml"]
 keywords = ["dual", "number", "hyperdual", "gradient", "autodifferentiate"]
 readme = "README.md"
