@@ -19,7 +19,7 @@ where
 /// If the function `f` is defined as f: Y^{n} → Y^{n}, where Y is a given group,
 /// than `partials` returns the evaluation and gradient of `f` at position `x`, i.e.
 /// a tuple of ( f(t, x), ∇f(t, x) ).
-pub fn partials_t<T: Real + Num, M: DimName, N: DimName, F>(t: T, x: VectorN<T, M>, f: F) -> (VectorN<T, M>, MatrixMN<T, N, M>)
+pub fn partials_t<T: Real + Num, M: DimName, N: DimName, F>(t: T, x: VectorN<T, M>, f: F) -> (VectorN<T, N>, MatrixMN<T, N, M>)
 where
     F: Fn(T, &MatrixMN<Dual<T>, M, M>) -> MatrixMN<Dual<T>, N, M>,
     DefaultAllocator: Allocator<Dual<T>, M>
@@ -44,13 +44,13 @@ where
 
     let state_n_grad = f(t, &hyperdual_space);
     // Extract the dual part
-    let mut state = VectorN::<T, M>::zeros();
+    let mut state = VectorN::<T, N>::zeros();
     let mut grad = MatrixMN::<T, N, M>::zeros();
-    for i in 0..M::dim() {
-        for j in 0..N::dim() {
+    for i in 0..N::dim() {
+        for j in 0..M::dim() {
             if j == 0 {
                 // The state is duplicated in every column
-                state[(i, j)] = state_n_grad[(i, j)].real();
+                state[(i, 0)] = state_n_grad[(i, 0)].real();
             }
             grad[(i, j)] = state_n_grad[(i, j)].dual();
         }
@@ -67,7 +67,7 @@ where
 /// than `partials` returns the evaluation and gradient of `f` at position `x`, i.e.
 /// a tuple of ( f(x), ∇f(x) ).
 #[inline]
-pub fn partials<T: Real + Num, M: DimName, N: DimName, F>(x: VectorN<T, M>, f: F) -> (VectorN<T, M>, MatrixMN<T, N, M>)
+pub fn partials<T: Real + Num, M: DimName, N: DimName, F>(x: VectorN<T, M>, f: F) -> (VectorN<T, N>, MatrixMN<T, N, M>)
 where
     F: Fn(&MatrixMN<Dual<T>, M, M>) -> MatrixMN<Dual<T>, N, M>,
     DefaultAllocator: Allocator<Dual<T>, M>

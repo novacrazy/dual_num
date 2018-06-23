@@ -5,7 +5,7 @@ extern crate nalgebra as na;
 
 use dual_num::linalg::norm;
 use dual_num::{partials, partials_t};
-use na::{Matrix2x6, Matrix3x6, Matrix6, Matrix6x2, U3, U6, Vector3, Vector6};
+use na::{Matrix2x6, Matrix3x6, Matrix6, U3, U6, Vector2, Vector3, Vector6};
 
 macro_rules! abs_within {
     ($x:expr, $val:expr, $eps:expr, $msg:expr) => {
@@ -188,59 +188,70 @@ fn square_gradient_with_param() {
 
     zero_within!((grad - expected).norm(), 1e-16, "gradient computation is incorrect");
 }
-/*
+
 #[test]
 fn nonsquare_gradient_no_param() {
-    // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.
-    fn sensitivity(state: &Matrix2x6<Dual<f64>>) -> Matrix2x6<Dual<f64>> {
-        panic!("{}", state);
-        let radius = state.fixed_slice::<U3, U6>(0, 0).into_owned();
-        let velocity = state.fixed_slice::<U3, U6>(3, 0).into_owned();
-        let mut body_acceleration = Matrix3x6::zeros();
-        for i in 0..3 {
-            let this_norm = norm(&Vector3::new(radius[(0, i)], radius[(1, i)], radius[(2, i)]));
-            let body_acceleration_f = Dual::from_real(-398_600.4415) / this_norm.powi(3);
-            let this_body_acceleration = Vector3::new(
-                radius[(0, i)] * body_acceleration_f,
-                radius[(1, i)] * body_acceleration_f,
-                radius[(2, i)] * body_acceleration_f,
-            );
-            body_acceleration.set_column(i, &this_body_acceleration);
+    // This is an example of the sensitivity matrix (H tilde) of a ranging method.
+    fn sensitivity(state: &Matrix6<Dual<f64>>) -> Matrix2x6<Dual<f64>> {
+        let range_mat = state.fixed_slice::<U3, U6>(0, 0).into_owned();
+        let velocity_mat = state.fixed_slice::<U3, U6>(3, 0).into_owned();
+        let mut range_slice = Vec::with_capacity(6);
+        let mut range_rate_slice = Vec::with_capacity(6);
+        for j in 0..6 {
+            let range = norm(&Vector3::new(range_mat[(0, j)], range_mat[(1, j)], range_mat[(2, j)]));
+            range_slice.push(range);
+            let mut range_rate = Dual::from(0f64);
+            for i in 0..3 {
+                range_rate = range_rate + range_mat[(i, j)] * velocity_mat[(i, j)] / range;
+            }
+            range_rate_slice.push(range_rate);
         }
         let mut rtn = Matrix2x6::zeros();
-        // for i in 0..6 {
-        //     if i < 3 {
-        //         rtn.set_row(i, &velocity.row(i));
-        //     } else {
-        //         rtn.set_row(i, &body_acceleration.row(i - 3));
-        //     }
-        // }
+        rtn.set_row(0, &Vector6::from_row_slice(&range_slice).transpose());
+        rtn.set_row(1, &Vector6::from_row_slice(&range_rate_slice).transpose());
         rtn
     }
 
-    let rx = Vector6::new(9203.993716, 18450.606914, 7016.410940, -3.769098, 1.255100, 1.644035);
-    let tx = Vector6::new(4849.340233, 360.415547, 4114.752758, -0.026282, 0.353619, 0.000000);
+    let rx = Vector6::new(
+        9203.99371643433,
+        18450.60691397028,
+        7016.41093973247,
+        -3.769097909034852,
+        1.2551002399532656,
+        1.6440346105270638,
+    );
+    let tx = Vector6::new(
+        4849.340232977386,
+        360.4155470897664,
+        4114.752758150833,
+        -0.026281916700417594,
+        0.35361947364427143,
+        0.000000,
+    );
 
-    let (_, grad) = partials(rx - tx, sensitivity);
+    let (fx, dfdx) = partials(rx - tx, sensitivity);
 
-    /*
-┌                                                                                                                                                 ┐
-│     0.23123905265689662      0.9606180445702461        0.15408268225981                       0                       0                       0 │
-│ -0.00019563292172470923 0.000060817042613472664  0.00008937755133596409     0.23123905265689662      0.9606180445702461        0.15408268225981 │
-└                                                                                                                                                 ┘
-*/
+    let expected_fx = Vector2::new(18831.82547853717, 0.2538107291309079);
+    zero_within!(
+        (fx - expected_fx).norm(),
+        1e-16,
+        format!("f(x) computation is incorrect -- here comes the delta: {}", fx - expected_fx)
+    );
 
-    let mut expected_grad = Matrix2x6::zeros();
-    expected_grad[(0, 0)] = 0.23123905265689662;
-    expected_grad[(0, 1)] = 0.9606180445702461;
-    expected_grad[(0, 2)] = 0.15408268225981;
-    expected_grad[(1, 3)] = -0.00019563292172470923;
-    expected_grad[(1, 4)] = 0.000060817042613472664;
-    expected_grad[(1, 5)] = 0.00008937755133596409;
-    expected_grad[(1, 3)] = 0.23123905265689662;
-    expected_grad[(1, 4)] = 0.9606180445702461;
-    expected_grad[(1, 5)] = 0.15408268225981;
+    let mut expected_dfdx = Matrix2x6::zeros();
+    expected_dfdx[(0, 0)] = 0.23123905265689662;
+    expected_dfdx[(0, 1)] = 0.9606180445702461;
+    expected_dfdx[(0, 2)] = 0.15408268225981;
+    expected_dfdx[(1, 3)] = -0.00019563292172470923;
+    expected_dfdx[(1, 4)] = 0.000060817042613472664;
+    expected_dfdx[(1, 5)] = 0.00008937755133596409;
+    expected_dfdx[(1, 3)] = 0.23123905265689662;
+    expected_dfdx[(1, 4)] = 0.9606180445702461;
+    expected_dfdx[(1, 5)] = 0.15408268225981;
 
-    zero_within!((grad - expected_grad).norm(), 1e-16, "gradient computation is incorrect");
+    zero_within!(
+        (dfdx - expected_dfdx).norm(),
+        1e-16,
+        format!("partial computation is incorrect -- here comes the delta: {}", dfdx - expected_dfdx)
+    );
 }
-*/
