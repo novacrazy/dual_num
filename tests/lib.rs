@@ -48,6 +48,58 @@ fn derive() {
 }
 
 #[test]
+fn type_operations() {
+    let mut x = Dual::new(1.0, 2.0);
+    let val = 3.0f64;
+    abs_within!((x + val).real(), 4.0, std::f64::EPSILON, "add failed on real part");
+    abs_within!((x + val).dual(), 2.0, std::f64::EPSILON, "add failed on dual part");
+    x += val;
+    abs_within!(x.real(), 4.0, std::f64::EPSILON, "add_assign failed on real part");
+    abs_within!(x.dual(), 2.0, std::f64::EPSILON, "add_assign failed on dual part");
+    abs_within!((x - val).real(), 1.0, std::f64::EPSILON, "sub failed on real part");
+    abs_within!((x - val).dual(), 2.0, std::f64::EPSILON, "sub failed on dual part");
+    x -= val;
+    abs_within!(x.real(), 1.0, std::f64::EPSILON, "sub_assign failed on real part");
+    abs_within!(x.dual(), 2.0, std::f64::EPSILON, "sub_assign failed on dual part");
+    abs_within!((x * val).real(), 3.0, std::f64::EPSILON, "mul failed on real part");
+    abs_within!((x * val).dual(), 6.0, std::f64::EPSILON, "mul failed on dual part");
+    x *= val;
+    abs_within!(x.real(), 3.0, std::f64::EPSILON, "mul_assign failed on real part");
+    abs_within!(x.dual(), 6.0, std::f64::EPSILON, "mul_assign failed on dual part");
+    abs_within!((x / val).real(), 1.0, std::f64::EPSILON, "div failed on real part");
+    abs_within!((x / val).dual(), 2.0, std::f64::EPSILON, "div failed on dual part");
+    x /= val;
+    abs_within!(x.real(), 1.0, std::f64::EPSILON, "div_assign failed on real part");
+    abs_within!(x.dual(), 2.0, std::f64::EPSILON, "div_assign failed on dual part");
+}
+
+#[test]
+fn dual_operations() {
+    let mut x = Dual::new(1.0, 2.0);
+    let y = Dual::new(3.0, 4.0);
+    abs_within!((x + y).real(), 4.0, std::f64::EPSILON, "add failed");
+    abs_within!((x + y).dual(), 6.0, std::f64::EPSILON, "add failed");
+    x += y;
+    abs_within!(x.real(), 4.0, std::f64::EPSILON, "add_assign failed");
+    abs_within!(x.dual(), 6.0, std::f64::EPSILON, "add_assign failed");
+    abs_within!((x - y).real(), 1.0, std::f64::EPSILON, "sub failed");
+    abs_within!((x - y).dual(), 2.0, std::f64::EPSILON, "sub failed");
+    x -= y;
+    abs_within!(x.real(), 1.0, std::f64::EPSILON, "sub_assign failed");
+    abs_within!(x.dual(), 2.0, std::f64::EPSILON, "sub_assign failed");
+    abs_within!((x * y).real(), 3.0, std::f64::EPSILON, "mul failed");
+    abs_within!((x * y).dual(), 10.0, std::f64::EPSILON, "mul failed");
+    x *= y;
+    abs_within!(x.real(), 3.0, std::f64::EPSILON, "mul_assign failed");
+    abs_within!(x.dual(), 10.0, std::f64::EPSILON, "mul_assign failed");
+    abs_within!((x / y).real(), 1.0, std::f64::EPSILON, "div failed");
+    abs_within!((x / y).dual(), 2.0, std::f64::EPSILON, "div failed");
+    x /= y;
+    abs_within!(x.real(), 1.0, std::f64::EPSILON, "div_assign failed");
+    abs_within!(x.dual(), 2.0, std::f64::EPSILON, "div_assign failed");
+}
+
+#[test]
 fn test_norm() {
     let vec = Vector3::new(Dual::from_real(1.0), Dual::from_real(1.0), Dual::from_real(1.0));
     let this_norm = norm(&vec);
@@ -203,6 +255,14 @@ fn nonsquare_gradient_no_param() {
             let mut range_rate = Dual::from(0f64);
             for i in 0..3 {
                 range_rate = range_rate + range_mat[(i, j)] * velocity_mat[(i, j)] / range;
+                println!(
+                    "range_mat[({0}, {1})] ({2}) * velocity_mat[({0}, {1})] {3} = {4}",
+                    i,
+                    j,
+                    range_mat[(i, j)],
+                    velocity_mat[(i, j)],
+                    range_mat[(i, j)] * velocity_mat[(i, j)]
+                );
             }
             range_rate_slice.push(range_rate);
         }

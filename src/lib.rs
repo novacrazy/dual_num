@@ -30,7 +30,7 @@ extern crate num_traits;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::num::FpCategory;
-use std::ops::{Add, Deref, DerefMut, Div, Mul, Neg, Rem, Sub};
+use std::ops::{Add, AddAssign, Deref, DerefMut, Div, DivAssign, Mul, MulAssign, Neg, Rem, Sub, SubAssign};
 
 pub use num_traits::{Float, FloatConst, Num, One, Zero};
 
@@ -241,11 +241,23 @@ impl<T: Scalar + Num> Add<T> for Dual<T> {
     }
 }
 
+impl<T: Scalar + Num> AddAssign<T> for Dual<T> {
+    fn add_assign(&mut self, rhs: T) {
+        *self = (*self) + Dual::from_real(rhs)
+    }
+}
+
 impl<T: Scalar + Num> Sub<T> for Dual<T> {
     type Output = Dual<T>;
 
     fn sub(self, rhs: T) -> Dual<T> {
         Dual::new(self.real() - rhs, self.dual())
+    }
+}
+
+impl<T: Scalar + Num> SubAssign<T> for Dual<T> {
+    fn sub_assign(&mut self, rhs: T) {
+        *self = (*self) - Dual::from_real(rhs)
     }
 }
 
@@ -257,11 +269,23 @@ impl<T: Scalar + Num> Mul<T> for Dual<T> {
     }
 }
 
+impl<T: Scalar + Num> MulAssign<T> for Dual<T> {
+    fn mul_assign(&mut self, rhs: T) {
+        *self = (*self) * Dual::from_real(rhs)
+    }
+}
+
 impl<T: Scalar + Num> Div<T> for Dual<T> {
     type Output = Dual<T>;
 
     fn div(self, rhs: T) -> Dual<T> {
         self / Dual::from_real(rhs)
+    }
+}
+
+impl<T: Scalar + Num> DivAssign<T> for Dual<T> {
+    fn div_assign(&mut self, rhs: T) {
+        *self = (*self) / Dual::from_real(rhs)
     }
 }
 
@@ -281,6 +305,12 @@ impl<T: Scalar + Num> Add<Self> for Dual<T> {
     }
 }
 
+impl<T: Scalar + Num> AddAssign<Self> for Dual<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = (*self) + rhs
+    }
+}
+
 impl<T: Scalar + Num> Sub<Self> for Dual<T> {
     type Output = Self;
 
@@ -289,11 +319,23 @@ impl<T: Scalar + Num> Sub<Self> for Dual<T> {
     }
 }
 
+impl<T: Scalar + Num> SubAssign<Self> for Dual<T> {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = (*self) - rhs
+    }
+}
+
 impl<T: Scalar + Num> Mul<Self> for Dual<T> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
         Dual::new(self.real() * rhs.real(), self.real() * rhs.dual() + self.dual() * rhs.real())
+    }
+}
+
+impl<T: Scalar + Num> MulAssign<Self> for Dual<T> {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = (*self) * rhs
     }
 }
 
@@ -332,6 +374,12 @@ impl<T: Scalar + Num> Div<Self> for Dual<T> {
             self.real() / rhs.real(),
             (self.dual() * rhs.real() - self.real() * rhs.dual()) / (rhs.real() * rhs.real()),
         )
+    }
+}
+
+impl<T: Scalar + Num> DivAssign<Self> for Dual<T> {
+    fn div_assign(&mut self, rhs: Self) {
+        *self = (*self) / rhs
     }
 }
 
