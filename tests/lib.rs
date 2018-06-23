@@ -242,7 +242,27 @@ fn square_gradient_with_param() {
 }
 
 #[test]
-fn nonsquare_gradient_no_param() {
+fn linalg() {
+    let x = Vector2::new(Dual::from(1.0f64), Dual::new(-2.0f64, 3.5f64));
+    let val = Dual::new(2.0f64, 0.5f64);
+    let computed = x * val;
+    let expected = Vector2::new(Dual::new(2.0f64, 0.5f64), Dual::new(-4.0f64, 6.0f64));
+    for i in 0..2 {
+        zero_within!(
+            (expected - computed)[(i, 0)].real(),
+            1e-16,
+            format!("Vector2 multiplication incorrect (i={})", i)
+        );
+        zero_within!(
+            (expected - computed)[(i, 0)].dual(),
+            1e-16,
+            format!("Vector2 multiplication incorrect (i={})", i)
+        );
+    }
+}
+
+#[test]
+fn partials_no_param() {
     // This is an example of the sensitivity matrix (H tilde) of a ranging method.
     fn sensitivity(state: &Matrix6<Dual<f64>>) -> Matrix2x6<Dual<f64>> {
         let range_mat = state.fixed_slice::<U3, U6>(0, 0).into_owned();
@@ -254,16 +274,17 @@ fn nonsquare_gradient_no_param() {
             range_slice.push(range);
             let mut range_rate = Dual::from(0f64);
             for i in 0..3 {
-                range_rate = range_rate + range_mat[(i, j)] * velocity_mat[(i, j)] / range;
-                println!(
-                    "range_mat[({0}, {1})] ({2}) * velocity_mat[({0}, {1})] {3} = {4}",
-                    i,
-                    j,
-                    range_mat[(i, j)],
-                    velocity_mat[(i, j)],
-                    range_mat[(i, j)] * velocity_mat[(i, j)]
-                );
+                range_rate += range_mat[(i, j)] * velocity_mat[(i, j)] / range;
+                // println!(
+                //     "range_mat[({0}, {1})] ({2}) * velocity_mat[({0}, {1})] {3} = {4}",
+                //     i,
+                //     j,
+                //     range_mat[(i, j)].real(),
+                //     (velocity_mat[(i, j)] / range).real(),
+                //     (range_mat[(i, j)] * velocity_mat[(i, j)] / range).real()
+                // );
             }
+            println!("{} => {:.10}", j, range_rate);
             range_rate_slice.push(range_rate);
         }
         let mut rtn = Matrix2x6::zeros();
