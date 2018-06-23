@@ -100,14 +100,6 @@ fn dual_operations() {
 }
 
 #[test]
-fn test_norm() {
-    let vec = Vector3::new(Dual::from_real(1.0), Dual::from_real(1.0), Dual::from_real(1.0));
-    let this_norm = norm(&vec);
-    abs_within!(this_norm.real(), 3.0f64.sqrt(), std::f64::EPSILON, "incorrect real part of the norm");
-    zero_within!(this_norm.dual(), std::f64::EPSILON, "incorrect dual part of the norm");
-}
-
-#[test]
 fn square_gradient_no_param() {
     // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.
     fn eom(state: &Matrix6<Dual<f64>>) -> Matrix6<Dual<f64>> {
@@ -181,13 +173,9 @@ fn square_gradient_with_param() {
         let velocity = state.fixed_slice::<U3, U6>(3, 0).into_owned();
         let mut body_acceleration = Matrix3x6::zeros();
         for i in 0..3 {
-            let this_norm = norm(&Vector3::new(radius[(0, i)], radius[(1, i)], radius[(2, i)]));
-            let body_acceleration_f = Dual::from_real(-398_600.4415) / this_norm.powi(3);
-            let this_body_acceleration = Vector3::new(
-                radius[(0, i)] * body_acceleration_f,
-                radius[(1, i)] * body_acceleration_f,
-                radius[(2, i)] * body_acceleration_f,
-            );
+            let this_radius = Vector3::new(radius[(0, i)], radius[(1, i)], radius[(2, i)]);
+            let this_norm = norm(&this_radius);
+            let this_body_acceleration = this_radius * Dual::from_real(-398_600.4415) / this_norm.powi(3);
             body_acceleration.set_column(i, &this_body_acceleration);
         }
         let mut rtn = Matrix6::zeros();
@@ -243,9 +231,17 @@ fn square_gradient_with_param() {
 
 #[test]
 fn linalg() {
-    let x = Vector2::new(Dual::from(1.0f64), Dual::new(-2.0f64, 3.5f64));
-    let val = Dual::new(2.0f64, 0.5f64);
-    let computed = x * val;
+    // NOTE: Due to the implementation of std::ops::Mul in nalgebra, the syntax _must_ be vec * x
+    // where x is the scalar and vec the vector.
+    // Quote from the author, sebcrozet
+    // > The thing is that nalgebra cannot define the multiplication of a scalar by a vector
+    // > (where the scalar is on the left hand side) because such an implementation would look like
+    // > this: `impl<T: Scalar> Mul<Vector<T>> for T` which is forbidden by the compiler. That's
+    // > why the only multiplication automatically provided by nalgebra is when the scalar is on
+    // > the right-hand-side. When `T` here is `f32` or `f64` both multiplication orders work.
+    let vec = Vector2::new(Dual::from(1.0f64), Dual::new(-2.0f64, 3.5f64));
+    let x = Dual::new(2.0f64, 0.5f64);
+    let computed = vec * x;
     let expected = Vector2::new(Dual::new(2.0f64, 0.5f64), Dual::new(-4.0f64, 6.0f64));
     for i in 0..2 {
         zero_within!(
@@ -259,6 +255,16 @@ fn linalg() {
             format!("Vector2 multiplication incorrect (i={})", i)
         );
     }
+    // Checking the dot product
+    // NOTE: The tolerance is relatively high because of some rounding error probably due to the powi call.
+    let delta = computed.dot(&expected) - norm(&computed).powi(2);
+    zero_within!(delta.real(), 1e-12, "real part of the dot product is incorrect");
+    zero_within!(delta.dual(), 1e-12, "dual part of the dot product is incorrect");
+
+    let vec = Vector3::new(Dual::from_real(1.0), Dual::from_real(1.0), Dual::from_real(1.0));
+    let this_norm = norm(&vec);
+    abs_within!(this_norm.real(), 3.0f64.sqrt(), std::f64::EPSILON, "incorrect real part of the norm");
+    zero_within!(this_norm.dual(), std::f64::EPSILON, "incorrect dual part of the norm");
 }
 
 #[test]
