@@ -276,22 +276,16 @@ fn partials_no_param() {
         let mut range_slice = Vec::with_capacity(6);
         let mut range_rate_slice = Vec::with_capacity(6);
         for j in 0..6 {
-            let range = norm(&Vector3::new(range_mat[(0, j)], range_mat[(1, j)], range_mat[(2, j)]));
+            let rho_vec = Vector3::new(range_mat[(0, j)], range_mat[(1, j)], range_mat[(2, j)]);
+            let range = norm(&rho_vec);
+            let delta_v_vec = (Vector3::new(velocity_mat[(0, j)], velocity_mat[(1, j)], velocity_mat[(2, j)])) / range;
+
+            let rho_dot = rho_vec.dot(&delta_v_vec);
+
             range_slice.push(range);
-            let mut range_rate = Dual::from(0f64);
-            for i in 0..3 {
-                range_rate += range_mat[(i, j)] * velocity_mat[(i, j)] / range;
-                // println!(
-                //     "range_mat[({0}, {1})] ({2}) * velocity_mat[({0}, {1})] {3} = {4}",
-                //     i,
-                //     j,
-                //     range_mat[(i, j)].real(),
-                //     (velocity_mat[(i, j)] / range).real(),
-                //     (range_mat[(i, j)] * velocity_mat[(i, j)] / range).real()
-                // );
-            }
-            println!("{} => {:.10}", j, range_rate);
-            range_rate_slice.push(range_rate);
+
+            println!("{} => {:.30}", j, rho_dot.dual());
+            range_rate_slice.push(rho_dot);
         }
         let mut rtn = Matrix2x6::zeros();
         rtn.set_row(0, &Vector6::from_row_slice(&range_slice).transpose());
@@ -299,42 +293,36 @@ fn partials_no_param() {
         rtn
     }
 
-    let rx = Vector6::new(
-        9203.99371643433,
-        18450.60691397028,
-        7016.41093973247,
-        -3.769097909034852,
-        1.2551002399532656,
-        1.6440346105270638,
-    );
-    let tx = Vector6::new(
-        4849.340232977386,
-        360.4155470897664,
-        4114.752758150833,
-        -0.026281916700417594,
-        0.35361947364427143,
-        0.000000,
+    let vec = Vector6::new(
+        4354.65348345694383169757202267646790,
+        18090.19136688051366945728659629821777,
+        2901.65818158163710904773324728012085,
+        -3.74281599233443440510882282978855,
+        0.90148076630899409700248270382872,
+        1.64403461052706378886512084136484,
     );
 
-    let (fx, dfdx) = partials(rx - tx, sensitivity);
+    let (fx, dfdx) = partials(vec, sensitivity);
 
     let expected_fx = Vector2::new(18831.82547853717, 0.2538107291309079);
     zero_within!(
         (fx - expected_fx).norm(),
-        1e-16,
+        1e-20,
         format!("f(x) computation is incorrect -- here comes the delta: {}", fx - expected_fx)
     );
 
     let mut expected_dfdx = Matrix2x6::zeros();
-    expected_dfdx[(0, 0)] = 0.23123905265689662;
-    expected_dfdx[(0, 1)] = 0.9606180445702461;
-    expected_dfdx[(0, 2)] = 0.15408268225981;
-    expected_dfdx[(1, 3)] = -0.00019563292172470923;
-    expected_dfdx[(1, 4)] = 0.000060817042613472664;
-    expected_dfdx[(1, 5)] = 0.00008937755133596409;
-    expected_dfdx[(1, 3)] = 0.23123905265689662;
-    expected_dfdx[(1, 4)] = 0.9606180445702461;
-    expected_dfdx[(1, 5)] = 0.15408268225981;
+    expected_dfdx[(0, 0)] = 0.231239052656896620918658413757;
+    expected_dfdx[(0, 1)] = 0.960618044570246132352053791692;
+    expected_dfdx[(0, 2)] = 0.154082682259810005431788226815;
+    expected_dfdx[(1, 0)] = -0.000195632921724709225560004389;
+    expected_dfdx[(1, 1)] = 0.000060817042613472663975266591;
+    expected_dfdx[(1, 2)] = 0.000089377551335964087564182889;
+    expected_dfdx[(1, 3)] = 0.231239052656896620918658413757;
+    expected_dfdx[(1, 4)] = 0.960618044570246132352053791692;
+    expected_dfdx[(1, 5)] = 0.154082682259810005431788226815;
+
+    println!("{}{}", dfdx, expected_dfdx);
 
     zero_within!(
         (dfdx - expected_dfdx).norm(),
