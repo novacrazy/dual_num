@@ -1,4 +1,4 @@
-use super::na::{allocator::Allocator, DefaultAllocator, DimName, MatrixMN, Real, VectorN};
+use super::na::{DefaultAllocator, DimName, MatrixMN, Real, VectorN, allocator::Allocator};
 
 use super::{Dual, Num, One, Scalar};
 
@@ -17,19 +17,13 @@ where
 /// Let `t` be a parameter, `x` be a state vector and `f` be a function whose gradient is seeked.
 /// Calling `partials_t` will return a tuple of ( f(t, x), ∂f(t, x)/∂x ).
 /// If the function `f` is defined as f: Y^{n} → Y^{n}, where Y is a given group,
-/// than `partials` returns the evaluation and gradient of `f` at position `x`, i.e.
+/// than `partials_t` returns the evaluation and gradient of `f` at position `x`, i.e.
 /// a tuple of ( f(t, x), ∇f(t, x) ).
 pub fn partials_t<T: Real + Num, M: DimName, N: DimName, F>(t: T, x: VectorN<T, M>, f: F) -> (VectorN<T, N>, MatrixMN<T, N, M>)
 where
     F: Fn(T, &MatrixMN<Dual<T>, M, M>) -> MatrixMN<Dual<T>, N, M>,
-    DefaultAllocator: Allocator<Dual<T>, M>
-        + Allocator<Dual<T>, M>
-        + Allocator<Dual<T>, N, M>
-        + Allocator<Dual<T>, M, M>
-        + Allocator<usize, N>
-        + Allocator<T, N>
-        + Allocator<T, M>
-        + Allocator<T, N, M>,
+    DefaultAllocator:
+        Allocator<Dual<T>, M> + Allocator<Dual<T>, N, M> + Allocator<Dual<T>, M, M> + Allocator<T, N> + Allocator<T, M> + Allocator<T, N, M>,
 {
     // Create a Matrix for the hyperdual space
     let mut hyperdual_space = MatrixMN::<Dual<T>, M, M>::zeros();
@@ -70,14 +64,8 @@ where
 pub fn partials<T: Real + Num, M: DimName, N: DimName, F>(x: VectorN<T, M>, f: F) -> (VectorN<T, N>, MatrixMN<T, N, M>)
 where
     F: Fn(&MatrixMN<Dual<T>, M, M>) -> MatrixMN<Dual<T>, N, M>,
-    DefaultAllocator: Allocator<Dual<T>, M>
-        + Allocator<Dual<T>, M>
-        + Allocator<Dual<T>, N, M>
-        + Allocator<Dual<T>, M, M>
-        + Allocator<usize, N>
-        + Allocator<T, N>
-        + Allocator<T, M>
-        + Allocator<T, N, M>,
+    DefaultAllocator:
+        Allocator<Dual<T>, M> + Allocator<Dual<T>, N, M> + Allocator<Dual<T>, M, M> + Allocator<T, N> + Allocator<T, M> + Allocator<T, N, M>,
 {
     partials_t(T::zero(), x, |_, x| f(x))
 }
