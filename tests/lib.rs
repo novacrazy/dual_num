@@ -279,12 +279,9 @@ fn partials_no_param() {
             let rho_vec = Vector3::new(range_mat[(0, j)], range_mat[(1, j)], range_mat[(2, j)]);
             let range = norm(&rho_vec);
             let delta_v_vec = (Vector3::new(velocity_mat[(0, j)], velocity_mat[(1, j)], velocity_mat[(2, j)])) / range;
-
             let rho_dot = rho_vec.dot(&delta_v_vec);
 
             range_slice.push(range);
-
-            println!("{} => {:.30}", j, rho_dot.dual());
             range_rate_slice.push(rho_dot);
         }
         let mut rtn = Matrix2x6::zeros();
@@ -312,21 +309,19 @@ fn partials_no_param() {
     );
 
     let mut expected_dfdx = Matrix2x6::zeros();
-    expected_dfdx[(0, 0)] = 0.231239052656896620918658413757;
-    expected_dfdx[(0, 1)] = 0.960618044570246132352053791692;
-    expected_dfdx[(0, 2)] = 0.154082682259810005431788226815;
-    expected_dfdx[(1, 0)] = -0.000195632921724709225560004389;
-    expected_dfdx[(1, 1)] = 0.000060817042613472663975266591;
-    expected_dfdx[(1, 2)] = 0.000089377551335964087564182889;
-    expected_dfdx[(1, 3)] = 0.231239052656896620918658413757;
-    expected_dfdx[(1, 4)] = 0.960618044570246132352053791692;
-    expected_dfdx[(1, 5)] = 0.154082682259810005431788226815;
-
-    println!("{}{}", dfdx, expected_dfdx);
+    expected_dfdx[(0, 0)] = 0.23123905265689662091;
+    expected_dfdx[(0, 1)] = 0.96061804457024613235;
+    expected_dfdx[(0, 2)] = 0.15408268225981000543;
+    expected_dfdx[(1, 0)] = -0.00020186608829958833;
+    expected_dfdx[(1, 1)] = 0.00003492309339579752;
+    expected_dfdx[(1, 2)] = 0.00008522417406774546;
+    expected_dfdx[(1, 3)] = 0.23123905265689662091;
+    expected_dfdx[(1, 4)] = 0.96061804457024613235;
+    expected_dfdx[(1, 5)] = 0.15408268225981000543;
 
     zero_within!(
         (dfdx - expected_dfdx).norm(),
-        1e-16,
+        1e-20,
         format!("partial computation is incorrect -- here comes the delta: {}", dfdx - expected_dfdx)
     );
 }
