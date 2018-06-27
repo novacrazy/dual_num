@@ -1,6 +1,6 @@
-use super::na::{DefaultAllocator, DimName, MatrixMN, Real, VectorN, allocator::Allocator};
+use na::{allocator::Allocator, DefaultAllocator, DimName, MatrixMN, Real, VectorN};
 
-use super::{Dual, Num, One, Scalar};
+use {Dual, Num, One, Scalar};
 
 /// Evaluates the function using dual numbers to get the partial derivative at the input point
 #[inline]
@@ -30,25 +30,31 @@ where
 
     for i in 0..M::dim() {
         let mut v_i = VectorN::<Dual<T>, M>::zeros();
+
         for j in 0..M::dim() {
             v_i[(j, 0)] = Dual::new(x[(j, 0)], if i == j { T::one() } else { T::zero() });
         }
+
         hyperdual_space.set_column(i, &v_i);
     }
 
     let state_n_grad = f(t, &hyperdual_space);
+
     // Extract the dual part
     let mut state = VectorN::<T, N>::zeros();
     let mut grad = MatrixMN::<T, N, M>::zeros();
+
     for i in 0..N::dim() {
         for j in 0..M::dim() {
             if j == 0 {
                 // The state is duplicated in every column
                 state[(i, 0)] = state_n_grad[(i, 0)].real();
             }
+
             grad[(i, j)] = state_n_grad[(i, j)].dual();
         }
     }
+
     (state, grad)
 }
 

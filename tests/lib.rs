@@ -1,11 +1,11 @@
 extern crate dual_num;
-use dual_num::{differentiate, Dual, Float, FloatConst};
-
 extern crate nalgebra as na;
 
-use dual_num::linalg::norm;
-use dual_num::{partials, partials_t};
 use na::{Matrix2x6, Matrix3x6, Matrix6, U3, U6, Vector2, Vector3, Vector6};
+
+use dual_num::linalg::norm;
+use dual_num::{differentiate, Dual, Float, FloatConst};
+use dual_num::{partials, partials_t};
 
 macro_rules! abs_within {
     ($x:expr, $val:expr, $eps:expr, $msg:expr) => {
@@ -105,18 +105,24 @@ fn square_gradient_no_param() {
     fn eom(state: &Matrix6<Dual<f64>>) -> Matrix6<Dual<f64>> {
         let radius = state.fixed_slice::<U3, U6>(0, 0).into_owned();
         let velocity = state.fixed_slice::<U3, U6>(3, 0).into_owned();
+
         let mut body_acceleration = Matrix3x6::zeros();
+
         for i in 0..3 {
             let this_norm = norm(&Vector3::new(radius[(0, i)], radius[(1, i)], radius[(2, i)]));
             let body_acceleration_f = Dual::from_real(-398_600.4415) / this_norm.powi(3);
+
             let this_body_acceleration = Vector3::new(
                 radius[(0, i)] * body_acceleration_f,
                 radius[(1, i)] * body_acceleration_f,
                 radius[(2, i)] * body_acceleration_f,
             );
+
             body_acceleration.set_column(i, &this_body_acceleration);
         }
+
         let mut rtn = Matrix6::zeros();
+
         for i in 0..6 {
             if i < 3 {
                 rtn.set_row(i, &velocity.row(i));
@@ -135,6 +141,7 @@ fn square_gradient_no_param() {
         -2.226285193102822,
         1.6467383807226765,
     );
+
     let (fx, grad) = partials(state, eom);
 
     let expected_fx = Vector6::new(
@@ -149,6 +156,7 @@ fn square_gradient_no_param() {
     zero_within!((fx - expected_fx).norm(), 1e-16, "f(x) computation is incorrect");
 
     let mut expected = Matrix6::zeros();
+
     expected[(0, 3)] = 1.0;
     expected[(1, 4)] = 1.0;
     expected[(2, 5)] = 1.0;
@@ -171,14 +179,18 @@ fn square_gradient_with_param() {
     fn eom(_t: f64, state: &Matrix6<Dual<f64>>) -> Matrix6<Dual<f64>> {
         let radius = state.fixed_slice::<U3, U6>(0, 0).into_owned();
         let velocity = state.fixed_slice::<U3, U6>(3, 0).into_owned();
+
         let mut body_acceleration = Matrix3x6::zeros();
+
         for i in 0..3 {
             let this_radius = Vector3::new(radius[(0, i)], radius[(1, i)], radius[(2, i)]);
             let this_norm = norm(&this_radius);
             let this_body_acceleration = this_radius * Dual::from_real(-398_600.4415) / this_norm.powi(3);
             body_acceleration.set_column(i, &this_body_acceleration);
         }
+
         let mut rtn = Matrix6::zeros();
+
         for i in 0..6 {
             if i < 3 {
                 rtn.set_row(i, &velocity.row(i));
@@ -243,6 +255,7 @@ fn linalg() {
     let x = Dual::new(2.0f64, 0.5f64);
     let computed = vec * x;
     let expected = Vector2::new(Dual::new(2.0f64, 0.5f64), Dual::new(-4.0f64, 6.0f64));
+
     for i in 0..2 {
         zero_within!(
             (expected - computed)[(i, 0)].real(),
@@ -255,6 +268,7 @@ fn linalg() {
             format!("Vector2 multiplication incorrect (i={})", i)
         );
     }
+
     // Checking the dot product
     // NOTE: The tolerance is relatively high because of some rounding error probably due to the powi call.
     let delta = computed.dot(&expected) - norm(&computed).powi(2);
@@ -275,6 +289,7 @@ fn partials_no_param() {
         let velocity_mat = state.fixed_slice::<U3, U6>(3, 0).into_owned();
         let mut range_slice = Vec::with_capacity(6);
         let mut range_rate_slice = Vec::with_capacity(6);
+
         for j in 0..6 {
             let rho_vec = Vector3::new(range_mat[(0, j)], range_mat[(1, j)], range_mat[(2, j)]);
             let range = norm(&rho_vec);
@@ -284,7 +299,9 @@ fn partials_no_param() {
             range_slice.push(range);
             range_rate_slice.push(rho_dot);
         }
+
         let mut rtn = Matrix2x6::zeros();
+
         rtn.set_row(0, &Vector6::from_row_slice(&range_slice).transpose());
         rtn.set_row(1, &Vector6::from_row_slice(&range_rate_slice).transpose());
         rtn
@@ -302,6 +319,7 @@ fn partials_no_param() {
     let (fx, dfdx) = partials(vec, sensitivity);
 
     let expected_fx = Vector2::new(18831.82547853717, 0.2538107291309079);
+
     zero_within!(
         (fx - expected_fx).norm(),
         1e-20,
@@ -309,6 +327,7 @@ fn partials_no_param() {
     );
 
     let mut expected_dfdx = Matrix2x6::zeros();
+
     expected_dfdx[(0, 0)] = 0.23123905265689662091;
     expected_dfdx[(0, 1)] = 0.96061804457024613235;
     expected_dfdx[(0, 2)] = 0.15408268225981000543;
