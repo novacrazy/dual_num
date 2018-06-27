@@ -1,7 +1,7 @@
-use super::na::allocator::Allocator;
-use super::na::{DefaultAllocator, DimName, MatrixMN, Scalar};
+use na::allocator::Allocator;
+use na::{DefaultAllocator, DimName, MatrixMN, Scalar};
 
-use super::{Dual, Float, Zero};
+use {Dual, Float, Zero};
 
 pub fn norm<T: Scalar + Float, M: DimName, N: DimName>(v: &MatrixMN<Dual<T>, M, N>) -> Dual<T>
 where
