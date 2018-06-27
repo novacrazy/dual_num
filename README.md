@@ -8,7 +8,7 @@ Fully-featured Dual Number implementation with features for automatic differenti
 ```rust
 extern crate dual_num;
 
-use dual_num::{DualNumber, Float, differentiate};
+use dual_num::{Dual, Float, differentiate};
 
 fn main() {
     // find partial derivative at x=4.0
