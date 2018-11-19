@@ -56,6 +56,7 @@ pub struct Dual<T: Scalar>(na::Vector2<T>);
 
 impl<T: Scalar> Dual<T> {
     /// Create a new dual number from its real and dual parts.
+    #[inline]
     pub fn new(real: T, dual: T) -> Dual<T> {
         Dual(na::Vector2::new(real, dual))
     }
@@ -63,6 +64,7 @@ impl<T: Scalar> Dual<T> {
     /// Create a new dual number from a real number.
     ///
     /// The dual part is set to zero.
+    #[inline]
     pub fn from_real(real: T) -> Dual<T>
     where
         T: Zero,
@@ -71,36 +73,43 @@ impl<T: Scalar> Dual<T> {
     }
 
     /// Returns the real part
+    #[inline]
     pub fn real(&self) -> T {
         self.x
     }
 
     /// Returns the dual part
+    #[inline]
     pub fn dual(&self) -> T {
         self.y
     }
 
     /// Returns both real and dual parts as a tuple
+    #[inline]
     pub fn into_tuple(self) -> (T, T) {
         (self.x, self.y)
     }
 
     /// Returns a reference to the real part
+    #[inline]
     pub fn real_ref(&self) -> &T {
         &self.x
     }
 
     /// Returns a reference to the dual part
+    #[inline]
     pub fn dual_ref(&self) -> &T {
         &self.y
     }
 
     /// Returns a mutable reference to the real part
+    #[inline]
     pub fn real_mut(&mut self) -> &mut T {
         &mut self.x
     }
 
     /// Returns a mutable reference to the dual part
+    #[inline]
     pub fn dual_mut(&mut self) -> &mut T {
         &mut self.y
     }
@@ -112,7 +121,15 @@ impl<T: Scalar> Debug for Dual<T> {
     }
 }
 
+impl<T: Scalar + Zero> Default for Dual<T> {
+    #[inline]
+    fn default() -> Dual<T> {
+        Dual::new(T::zero(), T::zero())
+    }
+}
+
 impl<T: Scalar + Zero> From<T> for Dual<T> {
+    #[inline]
     fn from(real: T) -> Dual<T> {
         Dual::from_real(real)
     }
@@ -121,12 +138,14 @@ impl<T: Scalar + Zero> From<T> for Dual<T> {
 impl<T: Scalar> Deref for Dual<T> {
     type Target = na::Vector2<T>;
 
+    #[inline]
     fn deref(&self) -> &na::Vector2<T> {
         &self.0
     }
 }
 
 impl<T: Scalar> DerefMut for Dual<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut na::Vector2<T> {
         &mut self.0
     }
@@ -134,6 +153,7 @@ impl<T: Scalar> DerefMut for Dual<T> {
 
 impl<T: Scalar + Neg<Output = T>> Dual<T> {
     /// Returns the conjugate of the dual number.
+    #[inline]
     pub fn conjugate(self) -> Self {
         Dual::new(self.real(), self.dual().neg())
     }
@@ -148,38 +168,48 @@ impl<T: Scalar + Display> Display for Dual<T> {
 }
 
 impl<T: Scalar + PartialEq> PartialEq<Self> for Dual<T> {
+    #[inline]
     fn eq(&self, rhs: &Self) -> bool {
         self.0 == rhs.0
     }
 }
 
 impl<T: Scalar + PartialOrd> PartialOrd<Self> for Dual<T> {
+    #[inline]
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
         PartialOrd::partial_cmp(self.real_ref(), rhs.real_ref())
     }
 
+    #[inline]
     fn lt(&self, rhs: &Self) -> bool {
         self.real() < rhs.real()
     }
+
+    #[inline]
     fn gt(&self, rhs: &Self) -> bool {
         self.real() > rhs.real()
     }
 }
 
 impl<T: Scalar + PartialEq> PartialEq<T> for Dual<T> {
+    #[inline]
     fn eq(&self, rhs: &T) -> bool {
         *self.real_ref() == *rhs
     }
 }
 
 impl<T: Scalar + PartialOrd> PartialOrd<T> for Dual<T> {
+    #[inline]
     fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
         PartialOrd::partial_cmp(self.real_ref(), rhs)
     }
 
+    #[inline]
     fn lt(&self, rhs: &T) -> bool {
         self.real() < *rhs
     }
+
+    #[inline]
     fn gt(&self, rhs: &T) -> bool {
         self.real() > *rhs
     }
@@ -189,6 +219,7 @@ macro_rules! impl_to_primitive {
     ($($name:ident, $ty:ty),*) => {
         impl<T: Scalar + ToPrimitive> ToPrimitive for Dual<T> {
             $(
+                #[inline]
                 fn $name(&self) -> Option<$ty> {
                     self.real_ref().$name()
                 }
@@ -201,6 +232,7 @@ macro_rules! impl_from_primitive {
     ($($name:ident, $ty:ty),*) => {
         impl<T: Scalar + FromPrimitive> FromPrimitive for Dual<T> where T: Zero {
             $(
+                #[inline]
                 fn $name(n: $ty) -> Option<Dual<T>> {
                     T::$name(n).map(Dual::from_real)
                 }
@@ -234,12 +266,15 @@ impl_primitive_cast! {
 impl<T: Scalar + Num> Add<T> for Dual<T> {
     type Output = Dual<T>;
 
+    #[inline]
     fn add(self, rhs: T) -> Dual<T> {
         Dual::new(self.real() + rhs, self.dual())
     }
 }
 
 impl<T: Scalar + Num> AddAssign<T> for Dual<T> {
+
+    #[inline]
     fn add_assign(&mut self, rhs: T) {
         *self = (*self) + Dual::from_real(rhs)
     }
@@ -248,12 +283,14 @@ impl<T: Scalar + Num> AddAssign<T> for Dual<T> {
 impl<T: Scalar + Num> Sub<T> for Dual<T> {
     type Output = Dual<T>;
 
+    #[inline]
     fn sub(self, rhs: T) -> Dual<T> {
         Dual::new(self.real() - rhs, self.dual())
     }
 }
 
 impl<T: Scalar + Num> SubAssign<T> for Dual<T> {
+    #[inline]
     fn sub_assign(&mut self, rhs: T) {
         *self = (*self) - Dual::from_real(rhs)
     }
@@ -262,12 +299,14 @@ impl<T: Scalar + Num> SubAssign<T> for Dual<T> {
 impl<T: Scalar + Num> Mul<T> for Dual<T> {
     type Output = Dual<T>;
 
+    #[inline]
     fn mul(self, rhs: T) -> Dual<T> {
         self * Dual::from_real(rhs)
     }
 }
 
 impl<T: Scalar + Num> MulAssign<T> for Dual<T> {
+    #[inline]
     fn mul_assign(&mut self, rhs: T) {
         *self = (*self) * Dual::from_real(rhs)
     }
@@ -276,12 +315,14 @@ impl<T: Scalar + Num> MulAssign<T> for Dual<T> {
 impl<T: Scalar + Num> Div<T> for Dual<T> {
     type Output = Dual<T>;
 
+    #[inline]
     fn div(self, rhs: T) -> Dual<T> {
         self / Dual::from_real(rhs)
     }
 }
 
 impl<T: Scalar + Num> DivAssign<T> for Dual<T> {
+    #[inline]
     fn div_assign(&mut self, rhs: T) {
         *self = (*self) / Dual::from_real(rhs)
     }
@@ -290,6 +331,7 @@ impl<T: Scalar + Num> DivAssign<T> for Dual<T> {
 impl<T: Scalar + Signed> Neg for Dual<T> {
     type Output = Self;
 
+    #[inline]
     fn neg(self) -> Self {
         Dual::new(self.real().neg(), self.dual().neg())
     }
@@ -298,12 +340,14 @@ impl<T: Scalar + Signed> Neg for Dual<T> {
 impl<T: Scalar + Num> Add<Self> for Dual<T> {
     type Output = Self;
 
+    #[inline]
     fn add(self, rhs: Self) -> Self {
         Dual::new(self.real() + rhs.real(), self.dual() + rhs.dual())
     }
 }
 
 impl<T: Scalar + Num> AddAssign<Self> for Dual<T> {
+    #[inline]
     fn add_assign(&mut self, rhs: Self) {
         *self = (*self) + rhs
     }
@@ -312,12 +356,14 @@ impl<T: Scalar + Num> AddAssign<Self> for Dual<T> {
 impl<T: Scalar + Num> Sub<Self> for Dual<T> {
     type Output = Self;
 
+    #[inline]
     fn sub(self, rhs: Self) -> Self {
         Dual::new(self.real() - rhs.real(), self.dual() - rhs.dual())
     }
 }
 
 impl<T: Scalar + Num> SubAssign<Self> for Dual<T> {
+    #[inline]
     fn sub_assign(&mut self, rhs: Self) {
         *self = (*self) - rhs
     }
@@ -326,12 +372,14 @@ impl<T: Scalar + Num> SubAssign<Self> for Dual<T> {
 impl<T: Scalar + Num> Mul<Self> for Dual<T> {
     type Output = Self;
 
+    #[inline]
     fn mul(self, rhs: Self) -> Self {
         Dual::new(self.real() * rhs.real(), self.real() * rhs.dual() + self.dual() * rhs.real())
     }
 }
 
 impl<T: Scalar + Num> MulAssign<Self> for Dual<T> {
+    #[inline]
     fn mul_assign(&mut self, rhs: Self) {
         *self = (*self) * rhs
     }
@@ -343,12 +391,14 @@ macro_rules! impl_mul_add {
             impl<T: Scalar + Num + Mul + Add> MulAdd<$a, $b> for Dual<T> {
                 type Output = Dual<T>;
 
+                #[inline]
                 fn mul_add(self, a: $a, b: $b) -> Dual<T> {
                     (self * a) + b
                 }
             }
 
             impl<T: Scalar + Num + Mul + Add> MulAddAssign<$a, $b> for Dual<T> {
+                #[inline]
                 fn mul_add_assign(&mut self, a: $a, b: $b) {
                     *self = (*self * a) + b;
                 }
@@ -367,6 +417,7 @@ impl_mul_add! {
 impl<T: Scalar + Num> Div<Self> for Dual<T> {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: Self) -> Self {
         Dual::new(
             self.real() / rhs.real(),
@@ -376,6 +427,7 @@ impl<T: Scalar + Num> Div<Self> for Dual<T> {
 }
 
 impl<T: Scalar + Num> DivAssign<Self> for Dual<T> {
+    #[inline]
     fn div_assign(&mut self, rhs: Self) {
         *self = (*self) / rhs
     }
@@ -399,6 +451,7 @@ where
 {
     type Output = Dual<T>;
 
+    #[inline]
     fn pow(self, rhs: P) -> Dual<T> {
         self.powf(rhs.into())
     }
@@ -410,6 +463,7 @@ where
 {
     type Output = Dual<T>;
 
+    #[inline]
     fn inv(self) -> Dual<T> {
         Dual::one() / self
     }
@@ -419,10 +473,12 @@ impl<T: Scalar> Signed for Dual<T>
 where
     T: Signed + PartialOrd,
 {
+    #[inline]
     fn abs(&self) -> Self {
         Dual::new(self.real().abs(), self.dual() * self.real().signum())
     }
 
+    #[inline]
     fn abs_sub(&self, rhs: &Self) -> Self {
         if self.real() > rhs.real() {
             Dual::new(self.real() - rhs.real(), self.sub(*rhs).dual())
@@ -431,14 +487,17 @@ where
         }
     }
 
+    #[inline]
     fn signum(&self) -> Self {
         Dual::from_real(self.real().signum())
     }
 
+    #[inline]
     fn is_positive(&self) -> bool {
         self.real().is_positive()
     }
 
+    #[inline]
     fn is_negative(&self) -> bool {
         self.real().is_negative()
     }
@@ -451,16 +510,19 @@ where
 }
 
 impl<T: Scalar + Num + Zero> Zero for Dual<T> {
+    #[inline]
     fn zero() -> Dual<T> {
         Dual::new(T::zero(), T::zero())
     }
 
+    #[inline]
     fn is_zero(&self) -> bool {
         self.real().is_zero() && self.dual().is_zero()
     }
 }
 
 impl<T: Scalar + Num + One> One for Dual<T> {
+    #[inline]
     fn one() -> Dual<T> {
         Dual::new(T::one(), T::zero())
     }
@@ -477,12 +539,14 @@ impl<T: Scalar + Num + One> One for Dual<T> {
 impl<T: Scalar + Num> Num for Dual<T> {
     type FromStrRadixErr = <T as Num>::FromStrRadixErr;
 
+    #[inline]
     fn from_str_radix(str: &str, radix: u32) -> Result<Dual<T>, Self::FromStrRadixErr> {
         <T as Num>::from_str_radix(str, radix).map(Dual::from_real)
     }
 }
 
 impl<T: Scalar + Float> NumCast for Dual<T> {
+    #[inline]
     fn from<N: ToPrimitive>(n: N) -> Option<Dual<T>> {
         <T as NumCast>::from(n).map(Dual::from_real)
     }
@@ -562,24 +626,29 @@ where
         is_sign_negative    REAL
     );
 
+    #[inline]
     fn classify(self) -> FpCategory {
         self.real().classify()
     }
 
     impl_real_op!(floor, ceil, round, trunc);
 
+    #[inline]
     fn fract(self) -> Self {
         Dual::new(self.real().fract(), self.dual())
     }
 
+    #[inline]
     fn signum(self) -> Self {
         Dual::from_real(self.real().signum())
     }
 
+    #[inline]
     fn abs(self) -> Self {
         Dual::new(self.real().abs(), self.dual() * self.real().signum())
     }
 
+    #[inline]
     fn max(self, other: Self) -> Self {
         if self.real() > other.real() {
             self
@@ -588,6 +657,7 @@ where
         }
     }
 
+    #[inline]
     fn min(self, other: Self) -> Self {
         if self.real() < other.real() {
             other
@@ -596,6 +666,7 @@ where
         }
     }
 
+    #[inline]
     fn abs_sub(self, rhs: Self) -> Self {
         if self.real() > rhs.real() {
             Dual::new(self.real() - rhs.real(), (self - rhs).dual())
@@ -604,6 +675,8 @@ where
         }
     }
 
+    #[inline]
+
     fn mul_add(self, a: Self, b: Self) -> Self {
         Dual::new(
             self.real().mul_add(a.real(), b.real()),
@@ -611,16 +684,19 @@ where
         )
     }
 
+    #[inline]
     fn recip(self) -> Self {
         Self::one() / self
     }
 
+    #[inline]
     fn powi(self, n: i32) -> Self {
         let nf = <T as NumCast>::from(n).expect("Invalid value");
 
         Dual::new(self.real().powi(n), nf * self.real().powi(n - 1) * self.dual())
     }
 
+    #[inline]
     fn powf(self, n: Self) -> Self {
         let real = self.real().powf(n.real());
 
@@ -629,75 +705,94 @@ where
         Dual::new(real, dual)
     }
 
+    #[inline]
     fn exp(self) -> Self {
         let real = self.real().exp();
 
         Dual::new(real, self.dual() * real)
     }
 
+    #[inline]
     fn exp2(self) -> Self {
         let real = self.real().exp2();
 
         Dual::new(real, self.dual() * T::LN_2() * real)
     }
 
+    #[inline]
     fn ln(self) -> Self {
         Dual::new(self.real().ln(), self.dual() / self.real())
     }
 
+    #[inline]
     fn log(self, base: Self) -> Self {
         self.ln() / base.ln()
     }
 
+    #[inline]
     fn log2(self) -> Self {
         Dual::new(self.real().log10(), self.dual() / (self.real() * T::LN_2()))
     }
 
+    #[inline]
     fn log10(self) -> Self {
         Dual::new(self.real().log10(), self.dual() / (self.real() * T::LN_10()))
     }
 
+    #[inline]
     fn sqrt(self) -> Self {
         let real = self.real().sqrt();
 
         Dual::new(real, self.dual() / (T::from(2).unwrap() * real))
     }
 
+    #[inline]
     fn cbrt(self) -> Self {
         let real = self.real().cbrt();
 
         Dual::new(real, self.dual() / (T::from(3).unwrap() * real))
     }
 
+    #[inline]
     fn hypot(self, other: Self) -> Self {
         let real = self.real().hypot(other.real());
 
         Dual::new(real, (self.real() * other.dual() + other.real() * self.dual()) / real)
     }
 
+    #[inline]
     fn sin(self) -> Self {
         Dual::new(self.real().sin(), self.dual() * self.real().cos())
     }
+    
+    #[inline]
     fn cos(self) -> Self {
         Dual::new(self.real().cos(), self.dual().neg() * self.real().sin())
     }
 
+    #[inline]
     fn tan(self) -> Self {
         let t = self.real().tan();
 
         Dual::new(t, self.dual() * (t * t + T::one()))
     }
 
+    #[inline]
     fn asin(self) -> Self {
         Dual::new(self.real().asin(), self.dual() / (T::one() - self.real().powi(2)).sqrt())
     }
+
+    #[inline]
     fn acos(self) -> Self {
         Dual::new(self.real().acos(), self.dual().neg() / (T::one() - self.real().powi(2)).sqrt())
     }
+
+    #[inline]
     fn atan(self) -> Self {
         Dual::new(self.real().atan(), self.dual() / (self.real().powi(2) + T::one()).sqrt())
     }
 
+    #[inline]
     fn atan2(self, other: Self) -> Self {
         Dual::new(
             self.real().atan2(other.real()),
@@ -705,6 +800,7 @@ where
         )
     }
 
+    #[inline]
     fn sin_cos(self) -> (Self, Self) {
         let (s, c) = self.real().sin_cos();
 
@@ -714,31 +810,39 @@ where
         (sn, cn)
     }
 
+    #[inline]
     fn exp_m1(self) -> Self {
         Dual::new(self.real().exp_m1(), self.dual() * self.real().exp())
     }
-
+    
+    #[inline]
     fn ln_1p(self) -> Self {
         Dual::new(self.real().ln_1p(), self.dual() / (self.real() + T::one()))
     }
 
+    #[inline]
     fn sinh(self) -> Self {
         Dual::new(self.real().sinh(), self.dual() * self.real().cosh())
     }
+
+    #[inline]
     fn cosh(self) -> Self {
         Dual::new(self.real().cosh(), self.dual() * self.real().sinh())
     }
 
+    #[inline]
     fn tanh(self) -> Self {
         let real = self.real().tanh();
 
         Dual::new(real, self.dual() * (T::one() - real.powi(2)))
     }
 
+    #[inline]
     fn asinh(self) -> Self {
         Dual::new(self.real().asinh(), self.dual() / (self.real().powi(2) + T::one()).sqrt())
     }
 
+    #[inline]
     fn acosh(self) -> Self {
         Dual::new(
             self.real().acosh(),
@@ -746,18 +850,22 @@ where
         )
     }
 
+    #[inline]
     fn atanh(self) -> Self {
         Dual::new(self.real().atanh(), self.dual() / (T::one() - self.real().powi(2)))
     }
 
+    #[inline]
     fn integer_decode(self) -> (u64, i16, i8) {
         self.real().integer_decode()
     }
 
+    #[inline]
     fn to_degrees(self) -> Self {
         Dual::from_real(self.real().to_degrees())
     }
 
+    #[inline]
     fn to_radians(self) -> Self {
         Dual::from_real(self.real().to_radians())
     }
