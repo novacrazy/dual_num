@@ -20,6 +20,11 @@ macro_rules! zero_within {
 }
 
 #[test]
+fn default() {
+    assert_eq!(Dual::<f64>::default(), Dual::new(0., 0.));
+}
+
+#[test]
 fn derive() {
     abs_within!(
         differentiate(4.0f64, |x| x.sqrt() + Dual::from_real(1.0)),
