@@ -112,6 +112,12 @@ impl<T: Scalar> Debug for Dual<T> {
     }
 }
 
+impl<T: Scalar + Zero> Default for Dual<T> {
+    fn default() -> Dual<T> {
+        Dual::new(T::zero(), T::zero())
+    }
+}
+
 impl<T: Scalar + Zero> From<T> for Dual<T> {
     fn from(real: T) -> Dual<T> {
         Dual::from_real(real)
