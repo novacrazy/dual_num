@@ -27,6 +27,7 @@ extern crate num_traits;
 
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
+use std::iter::{Product, Sum};
 use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Deref, DerefMut, Div, DivAssign, Mul, MulAssign, Neg, Rem, Sub, SubAssign};
 
@@ -608,6 +609,30 @@ macro_rules! impl_real_op {
         $(
             fn $op(self) -> Self { Dual::new(self.real().$op(), T::zero()) }
         )*
+    }
+}
+
+impl<T: Scalar + Num + Zero> Sum for Dual<T> {
+    fn sum<I: Iterator<Item = Dual<T>>>(iter: I) -> Dual<T> {
+        iter.fold(Dual::zero(), |a, b| a + b)
+    }
+}
+
+impl<'a, T: Scalar + Num + Zero> Sum<&'a Dual<T>> for Dual<T> {
+    fn sum<I: Iterator<Item = &'a Dual<T>>>(iter: I) -> Dual<T> {
+        iter.fold(Dual::zero(), |a, b| a + *b)
+    }
+}
+
+impl<T: Scalar + Num + One> Product for Dual<T> {
+    fn product<I: Iterator<Item = Dual<T>>>(iter: I) -> Dual<T> {
+        iter.fold(Dual::one(), |a, b| a * b)
+    }
+}
+
+impl<'a, T: Scalar + Num + One> Product<&'a Dual<T>> for Dual<T> {
+    fn product<I: Iterator<Item = &'a Dual<T>>>(iter: I) -> Dual<T> {
+        iter.fold(Dual::one(), |a, b| a * *b)
     }
 }
 
