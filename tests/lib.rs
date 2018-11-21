@@ -25,6 +25,13 @@ fn default() {
 }
 
 #[test]
+fn sum_product() {
+    let a = [Dual::new(1.0, 1.0), Dual::new(0.5, 0.5)];
+    assert_eq!(a.iter().cloned().sum::<Dual<f64>>(), Dual::new(1.5, 1.5));
+    assert_eq!(a.iter().cloned().product::<Dual<f64>>(), Dual::new(0.5, 1.0));
+}
+
+#[test]
 fn derive() {
     abs_within!(
         differentiate(4.0f64, |x| x.sqrt() + Dual::from_real(1.0)),
