@@ -39,6 +39,7 @@ mod differentials;
 pub use differentials::*;
 
 pub mod linalg;
+pub mod dual9;
 
 use num_traits::{FromPrimitive, Inv, MulAdd, MulAddAssign, NumCast, Pow, Signed, ToPrimitive, Unsigned};
 
