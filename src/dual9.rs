@@ -157,8 +157,8 @@ impl<T: Scalar + Display> Display for Dual9<T> {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         let precision = f.precision().unwrap_or(4);
 
-        write!(f, "{:.p$} + \u{03B5}1{:.p$} + \u{03B5}1{:.p$} + \u{03B5}1{:.p$} + \u{03B5}1{:.p$} + \u{03B5}1{:.p$} + \u{03B5}1{:.p$} + \u{03B5}1{:.p$} + \u{03B5}1{:.p$} + \u{03B5}1{:.p$}", 
-            self.real_ref(), &self[1],&self[2],&self[3],&self[4],&self[5],&self[6],&self[7],&self[8], p = precision)
+        write!(f, "{:.p$} + {:.p$}\u{03B5}1 + {:.p$}\u{03B5}2 + {:.p$}\u{03B5}3 + {:.p$}\u{03B5}4 + {:.p$}\u{03B5}5 + {:.p$}\u{03B5}6 + {:.p$}\u{03B5}7 + {:.p$}\u{03B5}8",
+            self.real_ref(), &self[1], &self[2], &self[3], &self[4], &self[5], &self[6], &self[7], &self[8], p = precision)
     }
 }
 
@@ -340,19 +340,7 @@ impl<T: Scalar + Num> Add<Self> for Dual9<T> {
 
     #[inline]
     fn add(self, rhs: Self) -> Self {
-        // TODO: find zip-like method?
-        //Dual9(self.zip(rhs).map(|x,y| x + y))
-        Dual9::new(
-            self[0] + rhs[0],
-            self[1] + rhs[1],
-            self[2] + rhs[2],
-            self[3] + rhs[3],
-            self[4] + rhs[4],
-            self[5] + rhs[5],
-            self[6] + rhs[6],
-            self[7] + rhs[7],
-            self[8] + rhs[8],
-        )
+        Dual9(self.zip_map(&rhs, |x, y| x + y))
     }
 }
 
@@ -368,17 +356,7 @@ impl<T: Scalar + Num> Sub<Self> for Dual9<T> {
 
     #[inline]
     fn sub(self, rhs: Self) -> Self {
-        Dual9::new(
-            self[0] - rhs[0],
-            self[1] - rhs[1],
-            self[2] - rhs[2],
-            self[3] - rhs[3],
-            self[4] - rhs[4],
-            self[5] - rhs[5],
-            self[6] - rhs[6],
-            self[7] - rhs[7],
-            self[8] - rhs[8],
-        )
+        Dual9(self.zip_map(&rhs, |x, y| x - y))
     }
 }
 
@@ -394,7 +372,7 @@ impl<T: Scalar + Num> Mul<Self> for Dual9<T> {
 
     #[inline]
     fn mul(self, rhs: Self) -> Self {
-        // TODO: check
+        //Dual9(self.zip_map(&rhs, |x, y| rhs.real() * x + self.real() * y));
         Dual9::new(
             self.real() * rhs.real(),
             self.real() * rhs[1] + self[1] * rhs.real(),
