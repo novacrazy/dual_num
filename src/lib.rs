@@ -197,7 +197,7 @@ where
 
         write!(f, "{:.p$}", p = precision)?;
         for (i, x) in self.iter().skip(1).enumerate() {
-            write!(f, " + {:.p$}\u{03B5}{}", x, i, p = precision)?;
+            write!(f, " + {:.p$}\u{03B5}{}", x, i + 1, p = precision)?;
         }
 
         Ok(())

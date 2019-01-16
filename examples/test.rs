@@ -1,8 +1,3 @@
-Multi-dimensional dual numbers
-==============================
-
-Compute all partial derivatives efficiently and at the same time with multi-dimensional dual numbers:
-```
 extern crate dual_num;
 extern crate nalgebra as na;
 
@@ -18,6 +13,3 @@ fn main() {
     println!("Dual output={}", res);
     println!("f(4,5)={}, df/dx_4,5={}, df/dy_4,5={}", res[0], res[1], res[2]);
 }
-```
-
-Based on the 2d dual numbers package [dual_num](https://github.com/novacrazy/dual_num).
