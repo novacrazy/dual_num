@@ -29,8 +29,8 @@ pub struct Dual9<T: Scalar>(Vector9<T>);
 impl<T: Scalar> Dual9<T> {
     /// Create a new dual number from its real and dual parts.
     #[inline]
-    pub fn new(real: T, dual1: T, dual2: T, dual3: T, dual4: T, dual5: T, dual6: T, dual7: T, dual8: T) -> Dual9<T> {
-        Dual9(Vector9::from_row_slice(&[real, dual1, dual2, dual3, dual4, dual5, dual6, dual7, dual8]))
+    pub fn new(v: &[T]) -> Dual9<T> {
+        Dual9(Vector9::from_row_slice(v))
     }
 
     /// Create a new dual number from a real number.
@@ -41,17 +41,9 @@ impl<T: Scalar> Dual9<T> {
     where
         T: Zero,
     {
-        Dual9::new(
-            real,
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-        )
+        let mut dual = Vector9::zeros();
+        dual[0] = real;
+        Dual9(dual)
     }
 
     /// Returns the real part
@@ -72,43 +64,32 @@ impl<T: Scalar> Dual9<T> {
         &mut self[0]
     }
 
-    /// Returns a mutable reference to the first dual part
     #[inline]
-    pub fn dual_mut(&mut self) -> &mut T {
-        &mut self[1]
+    pub fn map_dual<F>(&self, r: T, f: F) -> Dual9<T>
+    where
+        F: Fn(&T) -> T,
+    {
+        // TODO: improve, so the real does not get mapped
+        let mut v = self.map(|x| f(&x));
+        v[0] = r;
+        Dual9(v)
     }
 }
 
 impl<T: Scalar> Debug for Dual9<T> {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        f.debug_tuple("Dual")
-            .field(self.real_ref())
-            .field(&self[1])
-            .field(&self[2])
-            .field(&self[3])
-            .field(&self[4])
-            .field(&self[5])
-            .field(&self[6])
-            .field(&self[7])
-            .field(&self[8])
-            .finish()
+        let mut a = f.debug_tuple("Dual");
+        for x in self.iter() {
+            a.field(x);
+        }
+        a.finish()
     }
 }
 
-impl<T: Scalar + Zero> Default for Dual9<T> {
+impl<T: Scalar + Num + Zero> Default for Dual9<T> {
     #[inline]
     fn default() -> Dual9<T> {
-        Dual9::new(
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-        )
+        Dual9::zero()
     }
 }
 
@@ -139,17 +120,7 @@ impl<T: Scalar + Neg<Output = T>> Dual9<T> {
     /// Returns the conjugate of the dual number.
     #[inline]
     pub fn conjugate(self) -> Self {
-        Dual9::new(
-            self.real(),
-            self[1].neg(),
-            self[2].neg(),
-            self[3].neg(),
-            self[4].neg(),
-            self[5].neg(),
-            self[6].neg(),
-            self[7].neg(),
-            self[8].neg(),
-        )
+        self.map_dual(self.real(), |x| x.neg())
     }
 }
 
@@ -157,8 +128,12 @@ impl<T: Scalar + Display> Display for Dual9<T> {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         let precision = f.precision().unwrap_or(4);
 
-        write!(f, "{:.p$} + {:.p$}\u{03B5}1 + {:.p$}\u{03B5}2 + {:.p$}\u{03B5}3 + {:.p$}\u{03B5}4 + {:.p$}\u{03B5}5 + {:.p$}\u{03B5}6 + {:.p$}\u{03B5}7 + {:.p$}\u{03B5}8",
-            self.real_ref(), &self[1], &self[2], &self[3], &self[4], &self[5], &self[6], &self[7], &self[8], p = precision)
+        write!(f, "{:.p$}", p = precision)?;
+        for (i, x) in self.iter().skip(1).enumerate() {
+            write!(f, " + {:.p$}\u{03B5}{}", x, i, p = precision)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -372,18 +347,10 @@ impl<T: Scalar + Num> Mul<Self> for Dual9<T> {
 
     #[inline]
     fn mul(self, rhs: Self) -> Self {
-        //Dual9(self.zip_map(&rhs, |x, y| rhs.real() * x + self.real() * y));
-        Dual9::new(
-            self.real() * rhs.real(),
-            self.real() * rhs[1] + self[1] * rhs.real(),
-            self.real() * rhs[2] + self[2] * rhs.real(),
-            self.real() * rhs[3] + self[3] * rhs.real(),
-            self.real() * rhs[4] + self[4] * rhs.real(),
-            self.real() * rhs[5] + self[5] * rhs.real(),
-            self.real() * rhs[6] + self[6] * rhs.real(),
-            self.real() * rhs[7] + self[7] * rhs.real(),
-            self.real() * rhs[8] + self[8] * rhs.real(),
-        )
+        // TODO: skip real part
+        let mut v = self.zip_map(&rhs, |x, y| rhs.real() * x + self.real() * y);
+        v[0] = self.real() * rhs.real();
+        Dual9(v)
     }
 }
 
@@ -428,18 +395,13 @@ impl<T: Scalar + Num> Div<Self> for Dual9<T> {
 
     #[inline]
     fn div(self, rhs: Self) -> Self {
+        // TODO: specialize with inv so we can precompute the inverse
         let d = rhs.real() * rhs.real();
-        Dual9::new(
-            self.real() / rhs.real(),
-            (self[1] * rhs.real() - self.real() * rhs[1]) / d,
-            (self[2] * rhs.real() - self.real() * rhs[2]) / d,
-            (self[3] * rhs.real() - self.real() * rhs[3]) / d,
-            (self[4] * rhs.real() - self.real() * rhs[4]) / d,
-            (self[5] * rhs.real() - self.real() * rhs[5]) / d,
-            (self[6] * rhs.real() - self.real() * rhs[6]) / d,
-            (self[7] * rhs.real() - self.real() * rhs[7]) / d,
-            (self[8] * rhs.real() - self.real() * rhs[8]) / d,
-        )
+
+        // TODO: skip real part
+        let mut v = self.zip_map(&rhs, |x, y| rhs.real() * x - self.real() * y / d);
+        v[0] = self.real() / rhs.real();
+        Dual9(v)
     }
 }
 
@@ -526,17 +488,7 @@ impl<T: Scalar + Unsigned> Unsigned for Dual9<T> where Self: Num {}
 impl<T: Scalar + Num + Zero> Zero for Dual9<T> {
     #[inline]
     fn zero() -> Dual9<T> {
-        Dual9::new(
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-        )
+        Dual9::from_real(T::zero())
     }
 
     #[inline]
@@ -548,17 +500,7 @@ impl<T: Scalar + Num + Zero> Zero for Dual9<T> {
 impl<T: Scalar + Num + One> One for Dual9<T> {
     #[inline]
     fn one() -> Dual9<T> {
-        Dual9::new(
-            T::one(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-            T::zero(),
-        )
+        Dual9::from_real(T::one())
     }
 
     #[inline]
@@ -627,12 +569,18 @@ macro_rules! impl_single_boolean_op {
     ($op:ident REAL) => {
         fn $op(self) -> bool {self.real().$op()}
     };
-    ($op:ident OR) =>   { fn $op(self) -> bool {self.real().$op() || self[1].$op() || self[1].$op()
-        || self[2].$op() || self[3].$op() || self[4].$op() || self[5].$op() || self[6].$op()
-        || self[7].$op() || self[8].$op()} };
-    ($op:ident AND) =>  { fn $op(self) -> bool {self.real().$op()  && self[1].$op() && self[1].$op()
-        && self[2].$op() && self[3].$op() && self[4].$op() && self[5].$op() && self[6].$op()
-        && self[7].$op() && self[8].$op()} };
+    ($op:ident OR) =>   { fn $op(self) -> bool {
+        let mut b = self.real().$op();
+        for x in self.iter().skip(1) {
+            b |= x.$op();
+        }
+        b} };
+    ($op:ident AND) =>  { fn $op(self) -> bool {
+        let mut b = self.real().$op();
+        for x in self.iter().skip(1) {
+            b &= x.$op();
+        }
+        b} };
 }
 
 macro_rules! impl_boolean_op {
@@ -644,8 +592,7 @@ macro_rules! impl_boolean_op {
 macro_rules! impl_real_op {
     ($($op:ident),*) => {
         $(
-            fn $op(self) -> Self { Dual9::new(self.real().$op(), T::zero(),
-                    T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()) }
+            fn $op(self) -> Self { Dual9::from_real(self.real().$op()) }
         )*
     }
 }
@@ -698,8 +645,9 @@ where
 
     #[inline]
     fn fract(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().fract(), self.Dual9())
+        let mut v = self.clone();
+        v[0] = self.real().fract();
+        v
     }
 
     #[inline]
@@ -741,19 +689,14 @@ where
     }
 
     #[inline]
-
     fn mul_add(self, a: Self, b: Self) -> Self {
-        Dual9::new(
-            self.real().mul_add(a.real(), b.real()),
-            self[1] * a.real() + self.real() * a[1] + b[1],
-            self[2] * a.real() + self.real() * a[2] + b[2],
-            self[3] * a.real() + self.real() * a[3] + b[3],
-            self[4] * a.real() + self.real() * a[4] + b[4],
-            self[5] * a.real() + self.real() * a[5] + b[5],
-            self[6] * a.real() + self.real() * a[6] + b[6],
-            self[7] * a.real() + self.real() * a[7] + b[7],
-            self[8] * a.real() + self.real() * a[8] + b[8],
-        )
+        let mut dual = Dual9::from_real(self.real().mul_add(a.real(), b.real()));
+
+        for x in 1..self.len() {
+            dual[x] = self[x] * a.real() + self.real() * a[x] + b[x];
+        }
+
+        dual
     }
 
     #[inline]
@@ -766,48 +709,33 @@ where
         let r = self.real().powi(n - 1);
         let nf = <T as NumCast>::from(n).expect("Invalid value") * r;
 
-        Dual9::new(
-            self.real() * r,
-            nf * self[1],
-            nf * self[2],
-            nf * self[3],
-            nf * self[4],
-            nf * self[5],
-            nf * self[6],
-            nf * self[7],
-            nf * self[8],
-        )
+        self.map_dual(self.real() * r, |x| nf * *x)
     }
 
     #[inline]
     fn powf(self, n: Self) -> Self {
-        let real = self.real().powf(n.real());
+        let c = self.real().powf(n.real());
 
-        unimplemented!()
-        //let dual = n.real() * self.real().powf(n.real() - T::one()) * self.Dual9() + real * self.real().ln() * n.Dual9();
-        //Dual9::new(real, dual)
+        let mut v = self.zip_map(&n, |x, y| n.real() * self.real().powf(n.real() - T::one()) * x + c * self.real().ln() * y);
+        v[0] = c;
+        Dual9(v)
     }
 
     #[inline]
     fn exp(self) -> Self {
         let real = self.real().exp();
-
-        unimplemented!()
-        //Dual9::new(real, self.Dual9() * real)
+        self.map_dual(real, |x| real * *x)
     }
 
     #[inline]
     fn exp2(self) -> Self {
         let real = self.real().exp2();
-
-        unimplemented!()
-        //Dual9::new(real, self.Dual9() * T::LN_2() * real)
+        self.map_dual(real, |x| *x * T::LN_2() * real)
     }
 
     #[inline]
     fn ln(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().ln(), self.Dual9() / self.real())
+        self.map_dual(self.real().ln(), |x| *x / self.real())
     }
 
     #[inline]
@@ -817,159 +745,138 @@ where
 
     #[inline]
     fn log2(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().log10(), self.Dual9() / (self.real() * T::LN_2()))
+        self.map_dual(self.real().log2(), |x| *x / (self.real() * T::LN_2()))
     }
 
     #[inline]
     fn log10(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().log10(), self.Dual9() / (self.real() * T::LN_10()))
+        self.map_dual(self.real().log10(), |x| *x / (self.real() * T::LN_10()))
     }
 
     #[inline]
     fn sqrt(self) -> Self {
         let real = self.real().sqrt();
         let d = T::from(1).unwrap() / (T::from(2).unwrap() * real);
-
-        Dual9::new(
-            real,
-            self[1] * d,
-            self[2] * d,
-            self[3] * d,
-            self[4] * d,
-            self[5] * d,
-            self[6] * d,
-            self[7] * d,
-            self[8] * d,
-        )
+        self.map_dual(real, |x| *x * d)
     }
 
     #[inline]
     fn cbrt(self) -> Self {
         let real = self.real().cbrt();
-
-        unimplemented!()
-        //Dual9::new(real, self.Dual9() / (T::from(3).unwrap() * real))
+        self.map_dual(real, |x| *x / (T::from(3).unwrap() * real))
     }
 
     #[inline]
     fn hypot(self, other: Self) -> Self {
-        let real = self.real().hypot(other.real());
-
-        unimplemented!()
-        //Dual9::new(real, (self.real() * other.Dual9() + other.real() * self.Dual9()) / real)
+        let c = self.real().hypot(other.real());
+        let mut v = self.zip_map(&other, |x, y| (self.real() * y + other.real() * x) / c);
+        v[0] = c;
+        Dual9(v)
     }
 
     #[inline]
     fn sin(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().sin(), self.Dual9() * self.real().cos())
+        let c = self.real().cos();
+        self.map_dual(self.real().sin(), |x| *x * c)
     }
 
     #[inline]
     fn cos(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().cos(), self.Dual9().neg() * self.real().sin())
+        let c = self.real().sin();
+        self.map_dual(self.real().cos(), |x| x.neg() * c)
     }
 
     #[inline]
     fn tan(self) -> Self {
         let t = self.real().tan();
-
-        unimplemented!()
-        //Dual9::new(t, self.Dual9() * (t * t + T::one()))
+        let c = t * t + T::one();
+        self.map_dual(t, |x| *x * c)
     }
 
     #[inline]
     fn asin(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().asin(), self.Dual9() / (T::one() - self.real().powi(2)).sqrt())
+        // TODO: implement inv
+        let c = (T::one() - self.real().powi(2)).sqrt();
+        self.map_dual(self.real().asin(), |x| *x / c)
     }
 
     #[inline]
     fn acos(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().acos(), self.Dual9().neg() / (T::one() - self.real().powi(2)).sqrt())
+        // TODO: implement inv
+        let c = (T::one() - self.real().powi(2)).sqrt();
+        self.map_dual(self.real().acos(), |x| x.neg() / c)
     }
 
     #[inline]
     fn atan(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().atan(), self.Dual9() / (self.real().powi(2) + T::one()).sqrt())
+        // TODO: implement inv
+        let c = (self.real().powi(2) + T::one()).sqrt();
+        self.map_dual(self.real().atan(), |x| *x / c)
     }
 
     #[inline]
     fn atan2(self, other: Self) -> Self {
-        unimplemented!()
-        /*Dual9::new(
-            self.real().atan2(other.real()),
-            (other.real() * self.Dual9() - self.real() * other.Dual9()) / (self.real().powi(2) + other.real().powi(2)),
-        )*/
+        let c = self.real().powi(2) + other.real().powi(2);
+        let mut v = self.zip_map(&other, |x, y| (other.real() * x - self.real() * y) / c);
+        v[0] = self.real().atan2(other.real());
+        Dual9(v)
     }
 
     #[inline]
     fn sin_cos(self) -> (Self, Self) {
         let (s, c) = self.real().sin_cos();
-
-        unimplemented!()
-        /*let sn = Dual9::new(s, self.Dual9() * c);
-        let cn = Dual9::new(c, self.Dual9().neg() * s);
-        
-        (sn, cn)*/
+        let sn = self.map_dual(s, |x| *x * c);
+        let cn = self.map_dual(c, |x| x.neg() * s);
+        (sn, cn)
     }
 
     #[inline]
     fn exp_m1(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().exp_m1(), self.Dual9() * self.real().exp())
+        let c = self.real().exp();
+        self.map_dual(self.real().exp_m1(), |x| *x * c)
     }
 
     #[inline]
     fn ln_1p(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().ln_1p(), self.Dual9() / (self.real() + T::one()))
+        let c = self.real() + T::one();
+        self.map_dual(self.real().ln_1p(), |x| *x / c)
     }
 
     #[inline]
     fn sinh(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().sinh(), self.Dual9() * self.real().cosh())
+        let c = self.real().cosh();
+        self.map_dual(self.real().sinh(), |x| *x * c)
     }
 
     #[inline]
     fn cosh(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().cosh(), self.Dual9() * self.real().sinh())
+        let c = self.real().sinh();
+        self.map_dual(self.real().cosh(), |x| *x * c)
     }
 
     #[inline]
     fn tanh(self) -> Self {
         let real = self.real().tanh();
-
-        unimplemented!()
-        //Dual9::new(real, self.Dual9() * (T::one() - real.powi(2)))
+        let c = T::one() - real.powi(2);
+        self.map_dual(real, |x| *x * c)
     }
 
     #[inline]
     fn asinh(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().asinh(), self.Dual9() / (self.real().powi(2) + T::one()).sqrt())
+        let c = (self.real().powi(2) + T::one()).sqrt();
+        self.map_dual(self.real().asinh(), |x| *x / c)
     }
 
     #[inline]
     fn acosh(self) -> Self {
-        unimplemented!()
-        /*Dual9::new(
-            self.real().acosh(),
-            self.Dual9() / ((self.real() + T::one()).sqrt() * (self.real() - T::one()).sqrt()),
-        )*/
+        let c = (self.real() + T::one()).sqrt() * (self.real() - T::one()).sqrt();
+        self.map_dual(self.real().acosh(), |x| *x / c)
     }
 
     #[inline]
     fn atanh(self) -> Self {
-        unimplemented!()
-        //Dual9::new(self.real().atanh(), self.Dual9() / (T::one() - self.real().powi(2)))
+        let c = T::one() - self.real().powi(2);
+        self.map_dual(self.real().atanh(), |x| *x / c)
     }
 
     #[inline]
@@ -979,14 +886,12 @@ where
 
     #[inline]
     fn to_degrees(self) -> Self {
-        unimplemented!()
-        //Dual9::from_real(self.real().to_degrees())
+        Dual9::from_real(self.real().to_degrees())
     }
 
     #[inline]
     fn to_radians(self) -> Self {
-        unimplemented!()
-        //Dual9::from_real(self.real().to_radians())
+        Dual9::from_real(self.real().to_radians())
     }
 }
 
