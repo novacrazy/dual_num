@@ -43,9 +43,11 @@ pub mod linalg;
 use num_traits::{FromPrimitive, Inv, MulAdd, MulAddAssign, NumCast, Pow, Signed, ToPrimitive, Unsigned};
 
 use na::allocator::Allocator;
-use na::dimension::U2;
 use na::storage::Owned;
 use na::{DefaultAllocator, Dim, DimName, Scalar, VectorN};
+
+// Re-export dimensions
+pub use na::dimension::*;
 
 /// Dual Number structure
 ///
