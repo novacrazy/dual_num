@@ -560,7 +560,7 @@ where
         let d = rhs.real() * rhs.real();
 
         // TODO: skip real part
-        let mut v = self.zip_map(&rhs, |x, y| rhs.real() * x - self.real() * y / d);
+        let mut v = self.zip_map(&rhs, |x, y| (rhs.real() * x - self.real() * y) / d);
         v[0] = self.real() / rhs.real();
         DualN(v)
     }
@@ -934,8 +934,10 @@ where
     #[inline]
     fn powf(self, n: Self) -> Self {
         let c = self.real().powf(n.real());
+        let a = n.real() * self.real().powf(n.real() - T::one());
+        let b = c * self.real().ln();
 
-        let mut v = self.zip_map(&n, |x, y| n.real() * self.real().powf(n.real() - T::one()) * x + c * self.real().ln() * y);
+        let mut v = self.zip_map(&n, |x, y| a * x + b * y);
         v[0] = c;
         DualN(v)
     }
