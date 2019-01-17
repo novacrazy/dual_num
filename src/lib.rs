@@ -42,12 +42,13 @@ pub mod linalg;
 
 use num_traits::{FromPrimitive, Inv, MulAdd, MulAddAssign, NumCast, Pow, Signed, ToPrimitive, Unsigned};
 
-use na::allocator::Allocator;
-use na::storage::Owned;
-use na::{DefaultAllocator, Dim, DimName, Scalar, VectorN};
+use na::{Scalar, VectorN};
 
-// Re-export dimensions
+// Re-export traits useful for construction and extension of duals
+pub use na::allocator::Allocator;
 pub use na::dimension::*;
+pub use na::storage::Owned;
+pub use na::{DefaultAllocator, Dim, DimName};
 
 /// Dual Number structure
 ///
