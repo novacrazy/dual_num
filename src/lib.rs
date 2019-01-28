@@ -756,7 +756,7 @@ where
 
     #[inline]
     fn log2(self) -> Self {
-        Dual::new(self.real().log10(), self.dual() / (self.real() * T::LN_2()))
+        Dual::new(self.real().log2(), self.dual() / (self.real() * T::LN_2()))
     }
 
     #[inline]
@@ -789,7 +789,7 @@ where
     fn sin(self) -> Self {
         Dual::new(self.real().sin(), self.dual() * self.real().cos())
     }
-    
+
     #[inline]
     fn cos(self) -> Self {
         Dual::new(self.real().cos(), self.dual().neg() * self.real().sin())
@@ -839,7 +839,7 @@ where
     fn exp_m1(self) -> Self {
         Dual::new(self.real().exp_m1(), self.dual() * self.real().exp())
     }
-    
+
     #[inline]
     fn ln_1p(self) -> Self {
         Dual::new(self.real().ln_1p(), self.dual() / (self.real() + T::one()))
