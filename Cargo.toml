@@ -12,4 +12,4 @@ repository = "https://github.com/novacrazy/dual_num"
 
 [dependencies]
 num-traits = "0.2"
-nalgebra = "0.16"
+nalgebra = "0.17"
