@@ -70,7 +70,7 @@ impl<T: Scalar> Dual<T> {
     where
         T: Zero,
     {
-        Dual::new(real, T::zero())
+        Self::new(real, T::zero())
     }
 
     /// Returns the real part
@@ -125,14 +125,14 @@ impl<T: Scalar> Debug for Dual<T> {
 impl<T: Scalar + Zero> Default for Dual<T> {
     #[inline]
     fn default() -> Dual<T> {
-        Dual::new(T::zero(), T::zero())
+        Self::new(T::zero(), T::zero())
     }
 }
 
 impl<T: Scalar + Zero> From<T> for Dual<T> {
     #[inline]
     fn from(real: T) -> Dual<T> {
-        Dual::from_real(real)
+        Self::from_real(real)
     }
 }
 
@@ -152,11 +152,25 @@ impl<T: Scalar> DerefMut for Dual<T> {
     }
 }
 
+impl<T: Scalar> AsRef<na::Vector2<T>> for Dual<T> {
+    #[inline]
+    fn as_ref(&self) -> &na::Vector2<T> {
+        &self.0
+    }
+}
+
+impl<T: Scalar> AsMut<na::Vector2<T>> for Dual<T> {
+    #[inline]
+    fn as_mut(&mut self) -> &mut na::Vector2<T> {
+        &mut self.0
+    }
+}
+
 impl<T: Scalar + Neg<Output = T>> Dual<T> {
     /// Returns the conjugate of the dual number.
     #[inline]
     pub fn conjugate(self) -> Self {
-        Dual::new(self.real(), self.dual().neg())
+        Self::new(self.real(), self.dual().neg())
     }
 }
 
@@ -235,7 +249,7 @@ macro_rules! impl_from_primitive {
             $(
                 #[inline]
                 fn $name(n: $ty) -> Option<Dual<T>> {
-                    T::$name(n).map(Dual::from_real)
+                    T::$name(n).map(Self::from_real)
                 }
             )*
         }
@@ -265,11 +279,11 @@ impl_primitive_cast! {
 }
 
 impl<T: Scalar + Num> Add<T> for Dual<T> {
-    type Output = Dual<T>;
+    type Output = Self;
 
     #[inline]
-    fn add(self, rhs: T) -> Dual<T> {
-        Dual::new(self.real() + rhs, self.dual())
+    fn add(self, rhs: T) -> Self {
+        Self::new(self.real() + rhs, self.dual())
     }
 }
 
@@ -277,55 +291,55 @@ impl<T: Scalar + Num> AddAssign<T> for Dual<T> {
 
     #[inline]
     fn add_assign(&mut self, rhs: T) {
-        *self = (*self) + Dual::from_real(rhs)
+        *self = (*self) + Self::from_real(rhs)
     }
 }
 
 impl<T: Scalar + Num> Sub<T> for Dual<T> {
-    type Output = Dual<T>;
+    type Output = Self;
 
     #[inline]
-    fn sub(self, rhs: T) -> Dual<T> {
-        Dual::new(self.real() - rhs, self.dual())
+    fn sub(self, rhs: T) -> Self {
+        Self::new(self.real() - rhs, self.dual())
     }
 }
 
 impl<T: Scalar + Num> SubAssign<T> for Dual<T> {
     #[inline]
     fn sub_assign(&mut self, rhs: T) {
-        *self = (*self) - Dual::from_real(rhs)
+        *self = (*self) - Self::from_real(rhs)
     }
 }
 
 impl<T: Scalar + Num> Mul<T> for Dual<T> {
-    type Output = Dual<T>;
+    type Output = Self;
 
     #[inline]
-    fn mul(self, rhs: T) -> Dual<T> {
-        self * Dual::from_real(rhs)
+    fn mul(self, rhs: T) -> Self {
+        self * Self::from_real(rhs)
     }
 }
 
 impl<T: Scalar + Num> MulAssign<T> for Dual<T> {
     #[inline]
     fn mul_assign(&mut self, rhs: T) {
-        *self = (*self) * Dual::from_real(rhs)
+        *self = (*self) * Self::from_real(rhs)
     }
 }
 
 impl<T: Scalar + Num> Div<T> for Dual<T> {
-    type Output = Dual<T>;
+    type Output = Self;
 
     #[inline]
-    fn div(self, rhs: T) -> Dual<T> {
-        self / Dual::from_real(rhs)
+    fn div(self, rhs: T) -> Self {
+        self / Self::from_real(rhs)
     }
 }
 
 impl<T: Scalar + Num> DivAssign<T> for Dual<T> {
     #[inline]
     fn div_assign(&mut self, rhs: T) {
-        *self = (*self) / Dual::from_real(rhs)
+        *self = (*self) / Self::from_real(rhs)
     }
 }
 
@@ -334,7 +348,7 @@ impl<T: Scalar + Signed> Neg for Dual<T> {
 
     #[inline]
     fn neg(self) -> Self {
-        Dual::new(self.real().neg(), self.dual().neg())
+        Self::new(self.real().neg(), self.dual().neg())
     }
 }
 
@@ -343,7 +357,7 @@ impl<T: Scalar + Num> Add<Self> for Dual<T> {
 
     #[inline]
     fn add(self, rhs: Self) -> Self {
-        Dual::new(self.real() + rhs.real(), self.dual() + rhs.dual())
+        Self::new(self.real() + rhs.real(), self.dual() + rhs.dual())
     }
 }
 
@@ -359,7 +373,7 @@ impl<T: Scalar + Num> Sub<Self> for Dual<T> {
 
     #[inline]
     fn sub(self, rhs: Self) -> Self {
-        Dual::new(self.real() - rhs.real(), self.dual() - rhs.dual())
+        Self::new(self.real() - rhs.real(), self.dual() - rhs.dual())
     }
 }
 
@@ -375,7 +389,7 @@ impl<T: Scalar + Num> Mul<Self> for Dual<T> {
 
     #[inline]
     fn mul(self, rhs: Self) -> Self {
-        Dual::new(self.real() * rhs.real(), self.real() * rhs.dual() + self.dual() * rhs.real())
+        Self::new(self.real() * rhs.real(), self.real() * rhs.dual() + self.dual() * rhs.real())
     }
 }
 
@@ -390,10 +404,10 @@ macro_rules! impl_mul_add {
     ($(<$a:ident, $b:ident>),*) => {
         $(
             impl<T: Scalar + Num + Mul + Add> MulAdd<$a, $b> for Dual<T> {
-                type Output = Dual<T>;
+                type Output = Self;
 
                 #[inline]
-                fn mul_add(self, a: $a, b: $b) -> Dual<T> {
+                fn mul_add(self, a: $a, b: $b) -> Self {
                     (self * a) + b
                 }
             }
@@ -420,7 +434,7 @@ impl<T: Scalar + Num> Div<Self> for Dual<T> {
 
     #[inline]
     fn div(self, rhs: Self) -> Self {
-        Dual::new(
+        Self::new(
             self.real() / rhs.real(),
             (self.dual() * rhs.real() - self.real() * rhs.dual()) / (rhs.real() * rhs.real()),
         )
@@ -450,10 +464,10 @@ impl<T: Scalar, P: Into<Dual<T>>> Pow<P> for Dual<T>
 where
     Dual<T>: Float,
 {
-    type Output = Dual<T>;
+    type Output = Self;
 
     #[inline]
-    fn pow(self, rhs: P) -> Dual<T> {
+    fn pow(self, rhs: P) -> Self {
         self.powf(rhs.into())
     }
 }
@@ -462,11 +476,11 @@ impl<T: Scalar> Inv for Dual<T>
 where
     Self: One + Div<Output = Self>,
 {
-    type Output = Dual<T>;
+    type Output = Self;
 
     #[inline]
-    fn inv(self) -> Dual<T> {
-        Dual::one() / self
+    fn inv(self) -> Self {
+        Self::one() / self
     }
 }
 
@@ -476,13 +490,13 @@ where
 {
     #[inline]
     fn abs(&self) -> Self {
-        Dual::new(self.real().abs(), self.dual() * self.real().signum())
+        Self::new(self.real().abs(), self.dual() * self.real().signum())
     }
 
     #[inline]
     fn abs_sub(&self, rhs: &Self) -> Self {
         if self.real() > rhs.real() {
-            Dual::new(self.real() - rhs.real(), self.sub(*rhs).dual())
+            Self::new(self.real() - rhs.real(), self.sub(*rhs).dual())
         } else {
             Self::zero()
         }
@@ -490,7 +504,7 @@ where
 
     #[inline]
     fn signum(&self) -> Self {
-        Dual::from_real(self.real().signum())
+        Self::from_real(self.real().signum())
     }
 
     #[inline]
@@ -513,7 +527,7 @@ where
 impl<T: Scalar + Num + Zero> Zero for Dual<T> {
     #[inline]
     fn zero() -> Dual<T> {
-        Dual::new(T::zero(), T::zero())
+        Self::new(T::zero(), T::zero())
     }
 
     #[inline]
@@ -525,7 +539,7 @@ impl<T: Scalar + Num + Zero> Zero for Dual<T> {
 impl<T: Scalar + Num + One> One for Dual<T> {
     #[inline]
     fn one() -> Dual<T> {
-        Dual::new(T::one(), T::zero())
+        Self::new(T::one(), T::zero())
     }
 
     #[inline]
@@ -542,21 +556,21 @@ impl<T: Scalar + Num> Num for Dual<T> {
 
     #[inline]
     fn from_str_radix(str: &str, radix: u32) -> Result<Dual<T>, Self::FromStrRadixErr> {
-        <T as Num>::from_str_radix(str, radix).map(Dual::from_real)
+        <T as Num>::from_str_radix(str, radix).map(Self::from_real)
     }
 }
 
 impl<T: Scalar + Float> NumCast for Dual<T> {
     #[inline]
     fn from<N: ToPrimitive>(n: N) -> Option<Dual<T>> {
-        <T as NumCast>::from(n).map(Dual::from_real)
+        <T as NumCast>::from(n).map(Self::from_real)
     }
 }
 
 macro_rules! impl_float_const {
     ($($c:ident),*) => {
         $(
-            fn $c() -> Dual<T> { Dual::from_real(T::$c()) }
+            fn $c() -> Dual<T> { Self::from_real(T::$c()) }
         )*
     }
 }
@@ -585,7 +599,7 @@ impl<T: Scalar + FloatConst + Zero> FloatConst for Dual<T> {
 macro_rules! impl_real_constant {
     ($($prop:ident),*) => {
         $(
-            fn $prop() -> Self { Dual::from_real(<T as Float>::$prop()) }
+            fn $prop() -> Self { Self::from_real(<T as Float>::$prop()) }
         )*
     }
 }
@@ -607,32 +621,32 @@ macro_rules! impl_boolean_op {
 macro_rules! impl_real_op {
     ($($op:ident),*) => {
         $(
-            fn $op(self) -> Self { Dual::new(self.real().$op(), T::zero()) }
+            fn $op(self) -> Self { Self::new(self.real().$op(), T::zero()) }
         )*
     }
 }
 
 impl<T: Scalar + Num + Zero> Sum for Dual<T> {
     fn sum<I: Iterator<Item = Dual<T>>>(iter: I) -> Dual<T> {
-        iter.fold(Dual::zero(), |a, b| a + b)
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
 impl<'a, T: Scalar + Num + Zero> Sum<&'a Dual<T>> for Dual<T> {
     fn sum<I: Iterator<Item = &'a Dual<T>>>(iter: I) -> Dual<T> {
-        iter.fold(Dual::zero(), |a, b| a + *b)
+        iter.fold(Self::zero(), |a, b| a + *b)
     }
 }
 
 impl<T: Scalar + Num + One> Product for Dual<T> {
     fn product<I: Iterator<Item = Dual<T>>>(iter: I) -> Dual<T> {
-        iter.fold(Dual::one(), |a, b| a * b)
+        iter.fold(Self::one(), |a, b| a * b)
     }
 }
 
 impl<'a, T: Scalar + Num + One> Product<&'a Dual<T>> for Dual<T> {
     fn product<I: Iterator<Item = &'a Dual<T>>>(iter: I) -> Dual<T> {
-        iter.fold(Dual::one(), |a, b| a * *b)
+        iter.fold(Self::one(), |a, b| a * *b)
     }
 }
 
@@ -660,17 +674,17 @@ where
 
     #[inline]
     fn fract(self) -> Self {
-        Dual::new(self.real().fract(), self.dual())
+        Self::new(self.real().fract(), self.dual())
     }
 
     #[inline]
     fn signum(self) -> Self {
-        Dual::from_real(self.real().signum())
+        Self::from_real(self.real().signum())
     }
 
     #[inline]
     fn abs(self) -> Self {
-        Dual::new(self.real().abs(), self.dual() * self.real().signum())
+        Self::new(self.real().abs(), self.dual() * self.real().signum())
     }
 
     #[inline]
@@ -694,7 +708,7 @@ where
     #[inline]
     fn abs_sub(self, rhs: Self) -> Self {
         if self.real() > rhs.real() {
-            Dual::new(self.real() - rhs.real(), (self - rhs).dual())
+            Self::new(self.real() - rhs.real(), (self - rhs).dual())
         } else {
             Self::zero()
         }
@@ -703,7 +717,7 @@ where
     #[inline]
 
     fn mul_add(self, a: Self, b: Self) -> Self {
-        Dual::new(
+        Self::new(
             self.real().mul_add(a.real(), b.real()),
             self.dual() * a.real() + self.real() * a.dual() + b.dual(),
         )
@@ -718,7 +732,7 @@ where
     fn powi(self, n: i32) -> Self {
         let nf = <T as NumCast>::from(n).expect("Invalid value");
 
-        Dual::new(self.real().powi(n), nf * self.real().powi(n - 1) * self.dual())
+        Self::new(self.real().powi(n), nf * self.real().powi(n - 1) * self.dual())
     }
 
     #[inline]
@@ -727,26 +741,26 @@ where
 
         let dual = n.real() * self.real().powf(n.real() - T::one()) * self.dual() + real * self.real().ln() * n.dual();
 
-        Dual::new(real, dual)
+        Self::new(real, dual)
     }
 
     #[inline]
     fn exp(self) -> Self {
         let real = self.real().exp();
 
-        Dual::new(real, self.dual() * real)
+        Self::new(real, self.dual() * real)
     }
 
     #[inline]
     fn exp2(self) -> Self {
         let real = self.real().exp2();
 
-        Dual::new(real, self.dual() * T::LN_2() * real)
+        Self::new(real, self.dual() * T::LN_2() * real)
     }
 
     #[inline]
     fn ln(self) -> Self {
-        Dual::new(self.real().ln(), self.dual() / self.real())
+        Self::new(self.real().ln(), self.dual() / self.real())
     }
 
     #[inline]
@@ -756,70 +770,70 @@ where
 
     #[inline]
     fn log2(self) -> Self {
-        Dual::new(self.real().log2(), self.dual() / (self.real() * T::LN_2()))
+        Self::new(self.real().log2(), self.dual() / (self.real() * T::LN_2()))
     }
 
     #[inline]
     fn log10(self) -> Self {
-        Dual::new(self.real().log10(), self.dual() / (self.real() * T::LN_10()))
+        Self::new(self.real().log10(), self.dual() / (self.real() * T::LN_10()))
     }
 
     #[inline]
     fn sqrt(self) -> Self {
         let real = self.real().sqrt();
 
-        Dual::new(real, self.dual() / (T::from(2).unwrap() * real))
+        Self::new(real, self.dual() / (T::from(2).unwrap() * real))
     }
 
     #[inline]
     fn cbrt(self) -> Self {
         let real = self.real().cbrt();
 
-        Dual::new(real, self.dual() / (T::from(3).unwrap() * real))
+        Self::new(real, self.dual() / (T::from(3).unwrap() * real))
     }
 
     #[inline]
     fn hypot(self, other: Self) -> Self {
         let real = self.real().hypot(other.real());
 
-        Dual::new(real, (self.real() * other.dual() + other.real() * self.dual()) / real)
+        Self::new(real, (self.real() * other.dual() + other.real() * self.dual()) / real)
     }
 
     #[inline]
     fn sin(self) -> Self {
-        Dual::new(self.real().sin(), self.dual() * self.real().cos())
+        Self::new(self.real().sin(), self.dual() * self.real().cos())
     }
 
     #[inline]
     fn cos(self) -> Self {
-        Dual::new(self.real().cos(), self.dual().neg() * self.real().sin())
+        Self::new(self.real().cos(), self.dual().neg() * self.real().sin())
     }
 
     #[inline]
     fn tan(self) -> Self {
         let t = self.real().tan();
 
-        Dual::new(t, self.dual() * (t * t + T::one()))
+        Self::new(t, self.dual() * (t * t + T::one()))
     }
 
     #[inline]
     fn asin(self) -> Self {
-        Dual::new(self.real().asin(), self.dual() / (T::one() - self.real().powi(2)).sqrt())
+        Self::new(self.real().asin(), self.dual() / (T::one() - self.real().powi(2)).sqrt())
     }
 
     #[inline]
     fn acos(self) -> Self {
-        Dual::new(self.real().acos(), self.dual().neg() / (T::one() - self.real().powi(2)).sqrt())
+        Self::new(self.real().acos(), self.dual().neg() / (T::one() - self.real().powi(2)).sqrt())
     }
 
     #[inline]
     fn atan(self) -> Self {
-        Dual::new(self.real().atan(), self.dual() / (self.real().powi(2) + T::one()).sqrt())
+        Self::new(self.real().atan(), self.dual() / (self.real().powi(2) + T::one()).sqrt())
     }
 
     #[inline]
     fn atan2(self, other: Self) -> Self {
-        Dual::new(
+        Self::new(
             self.real().atan2(other.real()),
             (other.real() * self.dual() - self.real() * other.dual()) / (self.real().powi(2) + other.real().powi(2)),
         )
@@ -829,47 +843,47 @@ where
     fn sin_cos(self) -> (Self, Self) {
         let (s, c) = self.real().sin_cos();
 
-        let sn = Dual::new(s, self.dual() * c);
-        let cn = Dual::new(c, self.dual().neg() * s);
+        let sn = Self::new(s, self.dual() * c);
+        let cn = Self::new(c, self.dual().neg() * s);
 
         (sn, cn)
     }
 
     #[inline]
     fn exp_m1(self) -> Self {
-        Dual::new(self.real().exp_m1(), self.dual() * self.real().exp())
+        Self::new(self.real().exp_m1(), self.dual() * self.real().exp())
     }
 
     #[inline]
     fn ln_1p(self) -> Self {
-        Dual::new(self.real().ln_1p(), self.dual() / (self.real() + T::one()))
+        Self::new(self.real().ln_1p(), self.dual() / (self.real() + T::one()))
     }
 
     #[inline]
     fn sinh(self) -> Self {
-        Dual::new(self.real().sinh(), self.dual() * self.real().cosh())
+        Self::new(self.real().sinh(), self.dual() * self.real().cosh())
     }
 
     #[inline]
     fn cosh(self) -> Self {
-        Dual::new(self.real().cosh(), self.dual() * self.real().sinh())
+        Self::new(self.real().cosh(), self.dual() * self.real().sinh())
     }
 
     #[inline]
     fn tanh(self) -> Self {
         let real = self.real().tanh();
 
-        Dual::new(real, self.dual() * (T::one() - real.powi(2)))
+        Self::new(real, self.dual() * (T::one() - real.powi(2)))
     }
 
     #[inline]
     fn asinh(self) -> Self {
-        Dual::new(self.real().asinh(), self.dual() / (self.real().powi(2) + T::one()).sqrt())
+        Self::new(self.real().asinh(), self.dual() / (self.real().powi(2) + T::one()).sqrt())
     }
 
     #[inline]
     fn acosh(self) -> Self {
-        Dual::new(
+        Self::new(
             self.real().acosh(),
             self.dual() / ((self.real() + T::one()).sqrt() * (self.real() - T::one()).sqrt()),
         )
@@ -877,7 +891,7 @@ where
 
     #[inline]
     fn atanh(self) -> Self {
-        Dual::new(self.real().atanh(), self.dual() / (T::one() - self.real().powi(2)))
+        Self::new(self.real().atanh(), self.dual() / (T::one() - self.real().powi(2)))
     }
 
     #[inline]
@@ -887,12 +901,12 @@ where
 
     #[inline]
     fn to_degrees(self) -> Self {
-        Dual::from_real(self.real().to_degrees())
+        Self::from_real(self.real().to_degrees())
     }
 
     #[inline]
     fn to_radians(self) -> Self {
-        Dual::from_real(self.real().to_radians())
+        Self::from_real(self.real().to_radians())
     }
 }
 
