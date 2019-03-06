@@ -198,7 +198,7 @@ where
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         let precision = f.precision().unwrap_or(4);
 
-        write!(f, "{:.p$}", p = precision)?;
+        write!(f, "{:.p$}", self.real(), p = precision)?;
         for (i, x) in self.iter().skip(1).enumerate() {
             write!(f, " + {:.p$}\u{03B5}{}", x, i + 1, p = precision)?;
         }
