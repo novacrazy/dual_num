@@ -42,7 +42,13 @@ pub mod linalg;
 
 use num_traits::{FromPrimitive, Inv, MulAdd, MulAddAssign, NumCast, Pow, Signed, ToPrimitive, Unsigned};
 
-pub use na::Scalar;
+use na::{Scalar, VectorN};
+
+// Re-export traits useful for construction and extension of duals
+pub use na::allocator::Allocator;
+pub use na::dimension::*;
+pub use na::storage::Owned;
+pub use na::{DefaultAllocator, Dim, DimName};
 
 /// Dual Number structure
 ///
@@ -53,110 +59,125 @@ pub use na::Scalar;
 ///
 /// Lastly, the `Rem` remainder operator is not correctly or fully defined for `Dual`, and will panic.
 #[derive(Clone, Copy)]
-pub struct Dual<T: Scalar>(na::Vector2<T>);
+pub struct DualN<T: Scalar, N: Dim + DimName>(VectorN<T, N>)
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy;
 
-impl<T: Scalar> Dual<T> {
+impl<T: Scalar, N: Dim + DimName> DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     /// Create a new dual number from its real and dual parts.
     #[inline]
-    pub fn new(real: T, dual: T) -> Dual<T> {
-        Dual(na::Vector2::new(real, dual))
+    pub fn from_slice(v: &[T]) -> DualN<T, N> {
+        DualN(VectorN::<T, N>::from_row_slice(v))
     }
 
     /// Create a new dual number from a real number.
     ///
     /// The dual part is set to zero.
     #[inline]
-    pub fn from_real(real: T) -> Dual<T>
+    pub fn from_real(real: T) -> DualN<T, N>
     where
         T: Zero,
     {
-        Self::new(real, T::zero())
+        let mut dual = VectorN::<T, N>::zeros();
+        dual[0] = real;
+        DualN(dual)
     }
 
     /// Returns the real part
     #[inline]
     pub fn real(&self) -> T {
-        self.x
-    }
-
-    /// Returns the dual part
-    #[inline]
-    pub fn dual(&self) -> T {
-        self.y
-    }
-
-    /// Returns both real and dual parts as a tuple
-    #[inline]
-    pub fn into_tuple(self) -> (T, T) {
-        (self.x, self.y)
+        self[0]
     }
 
     /// Returns a reference to the real part
     #[inline]
     pub fn real_ref(&self) -> &T {
-        &self.x
-    }
-
-    /// Returns a reference to the dual part
-    #[inline]
-    pub fn dual_ref(&self) -> &T {
-        &self.y
+        &self[0]
     }
 
     /// Returns a mutable reference to the real part
     #[inline]
     pub fn real_mut(&mut self) -> &mut T {
-        &mut self.x
+        &mut self[0]
     }
 
-    /// Returns a mutable reference to the dual part
     #[inline]
-    pub fn dual_mut(&mut self) -> &mut T {
-        &mut self.y
+    pub fn map_dual<F>(&self, r: T, f: F) -> DualN<T, N>
+    where
+        F: Fn(&T) -> T,
+    {
+        // TODO: improve, so the real does not get mapped
+        let mut v = self.map(|x| f(&x));
+        v[0] = r;
+        DualN(v)
     }
 }
 
-impl<T: Scalar> Debug for Dual<T> {
+impl<T: Scalar, N: Dim + DimName> Debug for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        f.debug_tuple("Dual").field(self.real_ref()).field(self.dual_ref()).finish()
+        let mut a = f.debug_tuple("Dual");
+        for x in self.iter() {
+            a.field(x);
+        }
+        a.finish()
     }
 }
 
-impl<T: Scalar + Zero> Default for Dual<T> {
+impl<T: Scalar + Num + Zero, N: Dim + DimName> Default for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
-    fn default() -> Dual<T> {
-        Self::new(T::zero(), T::zero())
+    fn default() -> DualN<T, N> {
+        DualN::zero()
     }
 }
 
-impl<T: Scalar + Zero> From<T> for Dual<T> {
+impl<T: Scalar + Zero, N: Dim + DimName> From<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
-    fn from(real: T) -> Dual<T> {
-        Self::from_real(real)
+    fn from(real: T) -> DualN<T, N> {
+        DualN::from_real(real)
     }
 }
 
-impl<T: Scalar> Deref for Dual<T> {
-    type Target = na::Vector2<T>;
+impl<T: Scalar, N: Dim + DimName> Deref for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    type Target = VectorN<T, N>;
 
     #[inline]
-    fn deref(&self) -> &na::Vector2<T> {
+    fn deref(&self) -> &VectorN<T, N> {
         &self.0
     }
 }
 
-impl<T: Scalar> DerefMut for Dual<T> {
+impl<T: Scalar, N: Dim + DimName> DerefMut for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
-    fn deref_mut(&mut self) -> &mut na::Vector2<T> {
+    fn deref_mut(&mut self) -> &mut VectorN<T, N> {
         &mut self.0
     }
 }
 
-impl<T: Scalar> AsRef<na::Vector2<T>> for Dual<T> {
-    #[inline]
-    fn as_ref(&self) -> &na::Vector2<T> {
-        &self.0
-    }
 }
 
 impl<T: Scalar> AsMut<na::Vector2<T>> for Dual<T> {
@@ -166,30 +187,46 @@ impl<T: Scalar> AsMut<na::Vector2<T>> for Dual<T> {
     }
 }
 
-impl<T: Scalar + Neg<Output = T>> Dual<T> {
     /// Returns the conjugate of the dual number.
     #[inline]
     pub fn conjugate(self) -> Self {
-        Self::new(self.real(), self.dual().neg())
+        self.map_dual(self.real(), |x| x.neg())
     }
 }
 
-impl<T: Scalar + Display> Display for Dual<T> {
+impl<T: Scalar + Display, N: Dim + DimName> Display for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        let precision = f.precision().unwrap_or(2);
+        let precision = f.precision().unwrap_or(4);
 
-        write!(f, "{:.p$} + \u{03B5}{:.p$}", self.real_ref(), self.dual_ref(), p = precision)
+        write!(f, "{:.p$}", self.real(), p = precision)?;
+        for (i, x) in self.iter().skip(1).enumerate() {
+            write!(f, " + {:.p$}\u{03B5}{}", x, i + 1, p = precision)?;
+        }
+
+        Ok(())
     }
 }
 
-impl<T: Scalar + PartialEq> PartialEq<Self> for Dual<T> {
+impl<T: Scalar + PartialEq, N: Dim + DimName> PartialEq<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn eq(&self, rhs: &Self) -> bool {
         self.0 == rhs.0
     }
 }
 
-impl<T: Scalar + PartialOrd> PartialOrd<Self> for Dual<T> {
+impl<T: Scalar + PartialOrd, N: Dim + DimName> PartialOrd<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
         PartialOrd::partial_cmp(self.real_ref(), rhs.real_ref())
@@ -206,14 +243,22 @@ impl<T: Scalar + PartialOrd> PartialOrd<Self> for Dual<T> {
     }
 }
 
-impl<T: Scalar + PartialEq> PartialEq<T> for Dual<T> {
+impl<T: Scalar + PartialEq, N: Dim + DimName> PartialEq<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn eq(&self, rhs: &T) -> bool {
         *self.real_ref() == *rhs
     }
 }
 
-impl<T: Scalar + PartialOrd> PartialOrd<T> for Dual<T> {
+impl<T: Scalar + PartialOrd, N: Dim + DimName> PartialOrd<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
         PartialOrd::partial_cmp(self.real_ref(), rhs)
@@ -232,7 +277,10 @@ impl<T: Scalar + PartialOrd> PartialOrd<T> for Dual<T> {
 
 macro_rules! impl_to_primitive {
     ($($name:ident, $ty:ty),*) => {
-        impl<T: Scalar + ToPrimitive> ToPrimitive for Dual<T> {
+        impl<T: Scalar + ToPrimitive, N: Dim + DimName> ToPrimitive for DualN<T, N>
+            where
+                DefaultAllocator: Allocator<T, N>,
+                Owned<T, N>: Copy, {
             $(
                 #[inline]
                 fn $name(&self) -> Option<$ty> {
@@ -245,11 +293,15 @@ macro_rules! impl_to_primitive {
 
 macro_rules! impl_from_primitive {
     ($($name:ident, $ty:ty),*) => {
-        impl<T: Scalar + FromPrimitive> FromPrimitive for Dual<T> where T: Zero {
+        impl<T: Scalar + FromPrimitive, N: Dim + DimName> FromPrimitive for DualN<T, N>
+            where
+                T: Zero,
+                DefaultAllocator: Allocator<T, N>,
+                Owned<T, N>: Copy, {
             $(
                 #[inline]
-                fn $name(n: $ty) -> Option<Dual<T>> {
-                    T::$name(n).map(Self::from_real)
+                fn $name(n: $ty) -> Option<DualN<T,N>> {
+                    T::$name(n).map(DualN::from_real)
                 }
             )*
         }
@@ -278,122 +330,188 @@ impl_primitive_cast! {
     to_f64,     from_f64    - f64
 }
 
-impl<T: Scalar + Num> Add<T> for Dual<T> {
-    type Output = Self;
+impl<T: Scalar + Num, N: Dim + DimName> Add<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    type Output = DualN<T, N>;
 
     #[inline]
-    fn add(self, rhs: T) -> Self {
-        Self::new(self.real() + rhs, self.dual())
+    fn add(self, rhs: T) -> DualN<T, N> {
+        let mut d = self.clone();
+        d[0] = d[0] + rhs;
+        d
     }
 }
 
-impl<T: Scalar + Num> AddAssign<T> for Dual<T> {
-
+impl<T: Scalar + Num, N: Dim + DimName> AddAssign<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn add_assign(&mut self, rhs: T) {
-        *self = (*self) + Self::from_real(rhs)
+        *self = (*self) + DualN::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num> Sub<T> for Dual<T> {
-    type Output = Self;
+impl<T: Scalar + Num, N: Dim + DimName> Sub<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    type Output = DualN<T, N>;
 
     #[inline]
-    fn sub(self, rhs: T) -> Self {
-        Self::new(self.real() - rhs, self.dual())
+    fn sub(self, rhs: T) -> DualN<T, N> {
+        let mut d = self.clone();
+        d[0] = d[0] - rhs;
+        d
     }
 }
 
-impl<T: Scalar + Num> SubAssign<T> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> SubAssign<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn sub_assign(&mut self, rhs: T) {
-        *self = (*self) - Self::from_real(rhs)
+        *self = (*self) - DualN::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num> Mul<T> for Dual<T> {
-    type Output = Self;
+impl<T: Scalar + Num, N: Dim + DimName> Mul<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    type Output = DualN<T, N>;
 
     #[inline]
-    fn mul(self, rhs: T) -> Self {
-        self * Self::from_real(rhs)
+    fn mul(self, rhs: T) -> DualN<T, N> {
+        self * DualN::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num> MulAssign<T> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> MulAssign<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn mul_assign(&mut self, rhs: T) {
-        *self = (*self) * Self::from_real(rhs)
+        *self = (*self) * DualN::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num> Div<T> for Dual<T> {
-    type Output = Self;
+impl<T: Scalar + Num, N: Dim + DimName> Div<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    type Output = DualN<T, N>;
 
     #[inline]
-    fn div(self, rhs: T) -> Self {
-        self / Self::from_real(rhs)
+    fn div(self, rhs: T) -> DualN<T, N> {
+        self / DualN::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num> DivAssign<T> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> DivAssign<T> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn div_assign(&mut self, rhs: T) {
         *self = (*self) / Self::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Signed> Neg for Dual<T> {
+impl<T: Scalar + Signed, N: Dim + DimName> Neg for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     type Output = Self;
 
     #[inline]
     fn neg(self) -> Self {
-        Self::new(self.real().neg(), self.dual().neg())
+        DualN(self.map(|x| x.neg()))
     }
 }
 
-impl<T: Scalar + Num> Add<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> Add<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     type Output = Self;
 
     #[inline]
     fn add(self, rhs: Self) -> Self {
-        Self::new(self.real() + rhs.real(), self.dual() + rhs.dual())
+        DualN(self.zip_map(&rhs, |x, y| x + y))
     }
 }
 
-impl<T: Scalar + Num> AddAssign<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> AddAssign<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn add_assign(&mut self, rhs: Self) {
         *self = (*self) + rhs
     }
 }
 
-impl<T: Scalar + Num> Sub<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> Sub<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     type Output = Self;
 
     #[inline]
     fn sub(self, rhs: Self) -> Self {
-        Self::new(self.real() - rhs.real(), self.dual() - rhs.dual())
+        DualN(self.zip_map(&rhs, |x, y| x - y))
     }
 }
 
-impl<T: Scalar + Num> SubAssign<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> SubAssign<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn sub_assign(&mut self, rhs: Self) {
         *self = (*self) - rhs
     }
 }
 
-impl<T: Scalar + Num> Mul<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> Mul<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     type Output = Self;
 
     #[inline]
     fn mul(self, rhs: Self) -> Self {
-        Self::new(self.real() * rhs.real(), self.real() * rhs.dual() + self.dual() * rhs.real())
+        // TODO: skip real part
+        let mut v = self.zip_map(&rhs, |x, y| rhs.real() * x + self.real() * y);
+        v[0] = self.real() * rhs.real();
+        DualN(v)
     }
 }
 
-impl<T: Scalar + Num> MulAssign<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> MulAssign<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn mul_assign(&mut self, rhs: Self) {
         *self = (*self) * rhs
@@ -403,8 +521,10 @@ impl<T: Scalar + Num> MulAssign<Self> for Dual<T> {
 macro_rules! impl_mul_add {
     ($(<$a:ident, $b:ident>),*) => {
         $(
-            impl<T: Scalar + Num + Mul + Add> MulAdd<$a, $b> for Dual<T> {
-                type Output = Self;
+            impl<T: Scalar + Num + Mul + Add, N: Dim + DimName> MulAdd<$a, $b> for DualN<T,N>where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy, {
+                type Output = DualN<T,N>;
 
                 #[inline]
                 fn mul_add(self, a: $a, b: $b) -> Self {
@@ -412,7 +532,9 @@ macro_rules! impl_mul_add {
                 }
             }
 
-            impl<T: Scalar + Num + Mul + Add> MulAddAssign<$a, $b> for Dual<T> {
+            impl<T: Scalar + Num + Mul + Add, N: Dim + DimName> MulAddAssign<$a, $b> for DualN<T,N>where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy, {
                 #[inline]
                 fn mul_add_assign(&mut self, a: $a, b: $b) {
                     *self = (*self * a) + b;
@@ -429,26 +551,41 @@ impl_mul_add! {
     <T, T>
 }
 
-impl<T: Scalar + Num> Div<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> Div<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     type Output = Self;
 
     #[inline]
     fn div(self, rhs: Self) -> Self {
-        Self::new(
-            self.real() / rhs.real(),
-            (self.dual() * rhs.real() - self.real() * rhs.dual()) / (rhs.real() * rhs.real()),
-        )
+        // TODO: specialize with inv so we can precompute the inverse
+        let d = rhs.real() * rhs.real();
+
+        // TODO: skip real part
+        let mut v = self.zip_map(&rhs, |x, y| (rhs.real() * x - self.real() * y) / d);
+        v[0] = self.real() / rhs.real();
+        DualN(v)
     }
 }
 
-impl<T: Scalar + Num> DivAssign<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> DivAssign<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
     fn div_assign(&mut self, rhs: Self) {
         *self = (*self) / rhs
     }
 }
 
-impl<T: Scalar + Num> Rem<Self> for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> Rem<Self> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     type Output = Self;
 
     /// **UNIMPLEMENTED!!!**
@@ -460,9 +597,11 @@ impl<T: Scalar + Num> Rem<Self> for Dual<T> {
     }
 }
 
-impl<T: Scalar, P: Into<Dual<T>>> Pow<P> for Dual<T>
+impl<T: Scalar, P: Into<DualN<T, N>>, N: Dim + DimName> Pow<P> for DualN<T, N>
 where
-    Dual<T>: Float,
+    DualN<T, N>: Float,
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
 {
     type Output = Self;
 
@@ -472,9 +611,11 @@ where
     }
 }
 
-impl<T: Scalar> Inv for Dual<T>
+impl<T: Scalar, N: Dim + DimName> Inv for DualN<T, N>
 where
     Self: One + Div<Output = Self>,
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
 {
     type Output = Self;
 
@@ -484,19 +625,22 @@ where
     }
 }
 
-impl<T: Scalar> Signed for Dual<T>
+impl<T: Scalar, N: Dim + DimName> Signed for DualN<T, N>
 where
     T: Signed + PartialOrd,
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
 {
     #[inline]
     fn abs(&self) -> Self {
-        Self::new(self.real().abs(), self.dual() * self.real().signum())
+        let s = self.real().signum();
+        DualN(self.map(|x| x * s))
     }
 
     #[inline]
     fn abs_sub(&self, rhs: &Self) -> Self {
         if self.real() > rhs.real() {
-            Self::new(self.real() - rhs.real(), self.sub(*rhs).dual())
+            self.sub(*rhs)
         } else {
             Self::zero()
         }
@@ -518,28 +662,38 @@ where
     }
 }
 
-impl<T: Scalar + Unsigned> Unsigned for Dual<T>
+impl<T: Scalar + Unsigned, N: Dim + DimName> Unsigned for DualN<T, N>
 where
     Self: Num,
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
 {
 }
 
-impl<T: Scalar + Num + Zero> Zero for Dual<T> {
+impl<T: Scalar + Num + Zero, N: Dim + DimName> Zero for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
-    fn zero() -> Dual<T> {
-        Self::new(T::zero(), T::zero())
+    fn zero() -> DualN<T, N> {
+        DualN::from_real(T::zero())
     }
 
     #[inline]
     fn is_zero(&self) -> bool {
-        self.real().is_zero() && self.dual().is_zero()
+        self.iter().all(|x| x.is_zero())
     }
 }
 
-impl<T: Scalar + Num + One> One for Dual<T> {
+impl<T: Scalar + Num + One, N: Dim + DimName> One for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
-    fn one() -> Dual<T> {
-        Self::new(T::one(), T::zero())
+    fn one() -> DualN<T, N> {
+        DualN::from_real(T::one())
     }
 
     #[inline]
@@ -551,18 +705,26 @@ impl<T: Scalar + Num + One> One for Dual<T> {
     }
 }
 
-impl<T: Scalar + Num> Num for Dual<T> {
+impl<T: Scalar + Num, N: Dim + DimName> Num for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     type FromStrRadixErr = <T as Num>::FromStrRadixErr;
 
     #[inline]
-    fn from_str_radix(str: &str, radix: u32) -> Result<Dual<T>, Self::FromStrRadixErr> {
+    fn from_str_radix(str: &str, radix: u32) -> Result<DualN<T, N>, Self::FromStrRadixErr> {
         <T as Num>::from_str_radix(str, radix).map(Self::from_real)
     }
 }
 
-impl<T: Scalar + Float> NumCast for Dual<T> {
+impl<T: Scalar + Float, N: Dim + DimName> NumCast for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
-    fn from<N: ToPrimitive>(n: N) -> Option<Dual<T>> {
+    fn from<P: ToPrimitive>(n: P) -> Option<DualN<T, N>> {
         <T as NumCast>::from(n).map(Self::from_real)
     }
 }
@@ -575,7 +737,11 @@ macro_rules! impl_float_const {
     }
 }
 
-impl<T: Scalar + FloatConst + Zero> FloatConst for Dual<T> {
+impl<T: Scalar + FloatConst + Zero, N: Dim + DimName> FloatConst for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     impl_float_const!(
         E,
         FRAC_1_PI,
@@ -608,8 +774,18 @@ macro_rules! impl_single_boolean_op {
     ($op:ident REAL) => {
         fn $op(self) -> bool {self.real().$op()}
     };
-    ($op:ident OR) =>   { fn $op(self) -> bool {self.real().$op() || self.dual().$op()} };
-    ($op:ident AND) =>  { fn $op(self) -> bool {self.real().$op() && self.dual().$op()} };
+    ($op:ident OR) =>   { fn $op(self) -> bool {
+        let mut b = self.real().$op();
+        for x in self.iter().skip(1) {
+            b |= x.$op();
+        }
+        b} };
+    ($op:ident AND) =>  { fn $op(self) -> bool {
+        let mut b = self.real().$op();
+        for x in self.iter().skip(1) {
+            b &= x.$op();
+        }
+        b} };
 }
 
 macro_rules! impl_boolean_op {
@@ -621,38 +797,56 @@ macro_rules! impl_boolean_op {
 macro_rules! impl_real_op {
     ($($op:ident),*) => {
         $(
-            fn $op(self) -> Self { Self::new(self.real().$op(), T::zero()) }
+            fn $op(self) -> Self { DualN::from_real(self.real().$op()) }
         )*
     }
 }
 
-impl<T: Scalar + Num + Zero> Sum for Dual<T> {
-    fn sum<I: Iterator<Item = Dual<T>>>(iter: I) -> Dual<T> {
-        iter.fold(Self::zero(), |a, b| a + b)
+impl<T: Scalar + Num + Zero, N: Dim + DimName> Sum for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    fn sum<I: Iterator<Item = DualN<T, N>>>(iter: I) -> DualN<T, N> {
+        iter.fold(DualN::zero(), |a, b| a + b)
     }
 }
 
-impl<'a, T: Scalar + Num + Zero> Sum<&'a Dual<T>> for Dual<T> {
-    fn sum<I: Iterator<Item = &'a Dual<T>>>(iter: I) -> Dual<T> {
-        iter.fold(Self::zero(), |a, b| a + *b)
+impl<'a, T: Scalar + Num + Zero, N: Dim + DimName> Sum<&'a DualN<T, N>> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    fn sum<I: Iterator<Item = &'a DualN<T, N>>>(iter: I) -> DualN<T, N> {
+        iter.fold(DualN::zero(), |a, b| a + *b)
     }
 }
 
-impl<T: Scalar + Num + One> Product for Dual<T> {
-    fn product<I: Iterator<Item = Dual<T>>>(iter: I) -> Dual<T> {
-        iter.fold(Self::one(), |a, b| a * b)
+impl<T: Scalar + Num + One, N: Dim + DimName> Product for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    fn product<I: Iterator<Item = DualN<T, N>>>(iter: I) -> DualN<T, N> {
+        iter.fold(DualN::one(), |a, b| a * b)
     }
 }
 
-impl<'a, T: Scalar + Num + One> Product<&'a Dual<T>> for Dual<T> {
-    fn product<I: Iterator<Item = &'a Dual<T>>>(iter: I) -> Dual<T> {
-        iter.fold(Self::one(), |a, b| a * *b)
+impl<'a, T: Scalar + Num + One, N: Dim + DimName> Product<&'a DualN<T, N>> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    fn product<I: Iterator<Item = &'a DualN<T, N>>>(iter: I) -> DualN<T, N> {
+        iter.fold(DualN::one(), |a, b| a * *b)
     }
 }
 
-impl<T: Scalar> Float for Dual<T>
+impl<T: Scalar, N: Dim + DimName> Float for DualN<T, N>
 where
     T: Float + Signed + FloatConst,
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
 {
     impl_real_constant!(nan, infinity, neg_infinity, neg_zero, min_positive_value, epsilon, min_value, max_value);
 
@@ -674,7 +868,9 @@ where
 
     #[inline]
     fn fract(self) -> Self {
-        Self::new(self.real().fract(), self.dual())
+        let mut v = self.clone();
+        v[0] = self.real().fract();
+        v
     }
 
     #[inline]
@@ -684,7 +880,8 @@ where
 
     #[inline]
     fn abs(self) -> Self {
-        Self::new(self.real().abs(), self.dual() * self.real().signum())
+        let s = self.real().signum();
+        DualN(self.map(|x| x * s))
     }
 
     #[inline]
@@ -708,19 +905,21 @@ where
     #[inline]
     fn abs_sub(self, rhs: Self) -> Self {
         if self.real() > rhs.real() {
-            Self::new(self.real() - rhs.real(), (self - rhs).dual())
+            self.sub(rhs)
         } else {
             Self::zero()
         }
     }
 
     #[inline]
-
     fn mul_add(self, a: Self, b: Self) -> Self {
-        Self::new(
-            self.real().mul_add(a.real(), b.real()),
-            self.dual() * a.real() + self.real() * a.dual() + b.dual(),
-        )
+        let mut dual = DualN::from_real(self.real().mul_add(a.real(), b.real()));
+
+        for x in 1..self.len() {
+            dual[x] = self[x] * a.real() + self.real() * a[x] + b[x];
+        }
+
+        dual
     }
 
     #[inline]
@@ -730,37 +929,38 @@ where
 
     #[inline]
     fn powi(self, n: i32) -> Self {
-        let nf = <T as NumCast>::from(n).expect("Invalid value");
+        let r = self.real().powi(n - 1);
+        let nf = <T as NumCast>::from(n).expect("Invalid value") * r;
 
-        Self::new(self.real().powi(n), nf * self.real().powi(n - 1) * self.dual())
+        self.map_dual(self.real() * r, |x| nf * *x)
     }
 
     #[inline]
     fn powf(self, n: Self) -> Self {
-        let real = self.real().powf(n.real());
+        let c = self.real().powf(n.real());
+        let a = n.real() * self.real().powf(n.real() - T::one());
+        let b = c * self.real().ln();
 
-        let dual = n.real() * self.real().powf(n.real() - T::one()) * self.dual() + real * self.real().ln() * n.dual();
-
-        Self::new(real, dual)
+        let mut v = self.zip_map(&n, |x, y| a * x + b * y);
+        v[0] = c;
+        DualN(v)
     }
 
     #[inline]
     fn exp(self) -> Self {
         let real = self.real().exp();
-
-        Self::new(real, self.dual() * real)
+        self.map_dual(real, |x| real * *x)
     }
 
     #[inline]
     fn exp2(self) -> Self {
         let real = self.real().exp2();
-
-        Self::new(real, self.dual() * T::LN_2() * real)
+        self.map_dual(real, |x| *x * T::LN_2() * real)
     }
 
     #[inline]
     fn ln(self) -> Self {
-        Self::new(self.real().ln(), self.dual() / self.real())
+        self.map_dual(self.real().ln(), |x| *x / self.real())
     }
 
     #[inline]
@@ -770,128 +970,138 @@ where
 
     #[inline]
     fn log2(self) -> Self {
-        Self::new(self.real().log2(), self.dual() / (self.real() * T::LN_2()))
+        self.map_dual(self.real().log2(), |x| *x / (self.real() * T::LN_2()))
     }
 
     #[inline]
     fn log10(self) -> Self {
-        Self::new(self.real().log10(), self.dual() / (self.real() * T::LN_10()))
+        self.map_dual(self.real().log10(), |x| *x / (self.real() * T::LN_10()))
     }
 
     #[inline]
     fn sqrt(self) -> Self {
         let real = self.real().sqrt();
-
-        Self::new(real, self.dual() / (T::from(2).unwrap() * real))
+        let d = T::from(1).unwrap() / (T::from(2).unwrap() * real);
+        self.map_dual(real, |x| *x * d)
     }
 
     #[inline]
     fn cbrt(self) -> Self {
         let real = self.real().cbrt();
-
-        Self::new(real, self.dual() / (T::from(3).unwrap() * real))
+        self.map_dual(real, |x| *x / (T::from(3).unwrap() * real))
     }
 
     #[inline]
     fn hypot(self, other: Self) -> Self {
-        let real = self.real().hypot(other.real());
-
-        Self::new(real, (self.real() * other.dual() + other.real() * self.dual()) / real)
+        let c = self.real().hypot(other.real());
+        let mut v = self.zip_map(&other, |x, y| (self.real() * y + other.real() * x) / c);
+        v[0] = c;
+        DualN(v)
     }
 
     #[inline]
     fn sin(self) -> Self {
-        Self::new(self.real().sin(), self.dual() * self.real().cos())
+        let c = self.real().cos();
+        self.map_dual(self.real().sin(), |x| *x * c)
     }
 
     #[inline]
     fn cos(self) -> Self {
-        Self::new(self.real().cos(), self.dual().neg() * self.real().sin())
+        let c = self.real().sin();
+        self.map_dual(self.real().cos(), |x| x.neg() * c)
     }
 
     #[inline]
     fn tan(self) -> Self {
         let t = self.real().tan();
-
-        Self::new(t, self.dual() * (t * t + T::one()))
+        let c = t * t + T::one();
+        self.map_dual(t, |x| *x * c)
     }
 
     #[inline]
     fn asin(self) -> Self {
-        Self::new(self.real().asin(), self.dual() / (T::one() - self.real().powi(2)).sqrt())
+        // TODO: implement inv
+        let c = (T::one() - self.real().powi(2)).sqrt();
+        self.map_dual(self.real().asin(), |x| *x / c)
     }
 
     #[inline]
     fn acos(self) -> Self {
-        Self::new(self.real().acos(), self.dual().neg() / (T::one() - self.real().powi(2)).sqrt())
+        // TODO: implement inv
+        let c = (T::one() - self.real().powi(2)).sqrt();
+        self.map_dual(self.real().acos(), |x| x.neg() / c)
     }
 
     #[inline]
     fn atan(self) -> Self {
-        Self::new(self.real().atan(), self.dual() / (self.real().powi(2) + T::one()).sqrt())
+        // TODO: implement inv
+        let c = (self.real().powi(2) + T::one()).sqrt();
+        self.map_dual(self.real().atan(), |x| *x / c)
     }
 
     #[inline]
     fn atan2(self, other: Self) -> Self {
-        Self::new(
-            self.real().atan2(other.real()),
-            (other.real() * self.dual() - self.real() * other.dual()) / (self.real().powi(2) + other.real().powi(2)),
-        )
+        let c = self.real().powi(2) + other.real().powi(2);
+        let mut v = self.zip_map(&other, |x, y| (other.real() * x - self.real() * y) / c);
+        v[0] = self.real().atan2(other.real());
+        DualN(v)
     }
 
     #[inline]
     fn sin_cos(self) -> (Self, Self) {
         let (s, c) = self.real().sin_cos();
-
-        let sn = Self::new(s, self.dual() * c);
-        let cn = Self::new(c, self.dual().neg() * s);
-
+        let sn = self.map_dual(s, |x| *x * c);
+        let cn = self.map_dual(c, |x| x.neg() * s);
         (sn, cn)
     }
 
     #[inline]
     fn exp_m1(self) -> Self {
-        Self::new(self.real().exp_m1(), self.dual() * self.real().exp())
+        let c = self.real().exp();
+        self.map_dual(self.real().exp_m1(), |x| *x * c)
     }
 
     #[inline]
     fn ln_1p(self) -> Self {
-        Self::new(self.real().ln_1p(), self.dual() / (self.real() + T::one()))
+        let c = self.real() + T::one();
+        self.map_dual(self.real().ln_1p(), |x| *x / c)
     }
 
     #[inline]
     fn sinh(self) -> Self {
-        Self::new(self.real().sinh(), self.dual() * self.real().cosh())
+        let c = self.real().cosh();
+        self.map_dual(self.real().sinh(), |x| *x * c)
     }
 
     #[inline]
     fn cosh(self) -> Self {
-        Self::new(self.real().cosh(), self.dual() * self.real().sinh())
+        let c = self.real().sinh();
+        self.map_dual(self.real().cosh(), |x| *x * c)
     }
 
     #[inline]
     fn tanh(self) -> Self {
         let real = self.real().tanh();
-
-        Self::new(real, self.dual() * (T::one() - real.powi(2)))
+        let c = T::one() - real.powi(2);
+        self.map_dual(real, |x| *x * c)
     }
 
     #[inline]
     fn asinh(self) -> Self {
-        Self::new(self.real().asinh(), self.dual() / (self.real().powi(2) + T::one()).sqrt())
+        let c = (self.real().powi(2) + T::one()).sqrt();
+        self.map_dual(self.real().asinh(), |x| *x / c)
     }
 
     #[inline]
     fn acosh(self) -> Self {
-        Self::new(
-            self.real().acosh(),
-            self.dual() / ((self.real() + T::one()).sqrt() * (self.real() - T::one()).sqrt()),
-        )
+        let c = (self.real() + T::one()).sqrt() * (self.real() - T::one()).sqrt();
+        self.map_dual(self.real().acosh(), |x| *x / c)
     }
 
     #[inline]
     fn atanh(self) -> Self {
-        Self::new(self.real().atanh(), self.dual() / (T::one() - self.real().powi(2)))
+        let c = T::one() - self.real().powi(2);
+        self.map_dual(self.real().atanh(), |x| *x / c)
     }
 
     #[inline]
@@ -901,14 +1111,28 @@ where
 
     #[inline]
     fn to_degrees(self) -> Self {
-        Self::from_real(self.real().to_degrees())
+        DualN::from_real(self.real().to_degrees())
     }
 
     #[inline]
     fn to_radians(self) -> Self {
-        Self::from_real(self.real().to_radians())
+        DualN::from_real(self.real().to_radians())
     }
 }
 
 // TODO
-// impl<T: na::Real> na::Real for Dual<T> {}
+// impl<T: na::Real> na::Real for DualN<T,N> {}
+
+pub type Dual<T> = DualN<T, U2>;
+
+impl<T: Scalar> Dual<T> {
+    #[inline]
+    pub fn new(real: T, dual: T) -> Dual<T> {
+        Dual::from_slice(&[real, dual])
+    }
+
+    #[inline]
+    pub fn dual(&self) -> T {
+        self[1]
+    }
+}
