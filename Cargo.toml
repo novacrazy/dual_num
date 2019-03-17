@@ -1,11 +1,11 @@
 [package]
 name = "dual_num"
-description = "Fully-featured Dual Number implementation with features for automatic differentiation of multivariate vectorial functions into gradients"
+description = "Fully-featured Dual Number implementation with features for automatic differentiation of multivariate vectorial functions"
 authors = ["Aaron Trent <novacrazy@gmail.com>", "Christopher Rabotin <christopher.rabotin@gmail.com>"]
-version = "0.2.6"
+version = "0.3.0"
 license = "MIT"
 include = ["src/**/*", "Cargo.toml"]
-keywords = ["dual", "number", "hyperdual", "gradient", "autodifferentiate"]
+keywords = ["dual", "number", "hyperdual", "multidimentional", "autodifferentiate"]
 readme = "README.md"
 documentation = "https://docs.rs/dual_num/"
 repository = "https://github.com/novacrazy/dual_num"

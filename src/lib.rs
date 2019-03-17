@@ -186,12 +186,28 @@ where
     }
 }
 
-impl<T: Scalar> AsMut<na::Vector2<T>> for Dual<T> {
+impl<T: Scalar, N: Dim + DimName> AsRef<VectorN<T, N>> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     #[inline]
-    fn as_mut(&mut self) -> &mut na::Vector2<T> {
+    fn as_ref(&self) -> &VectorN<T, N> {
+        &self.0
+    }
+}
+
+impl<T: Scalar, N: Dim + DimName> AsMut<VectorN<T, N>> for DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
+    #[inline]
+    fn as_mut(&mut self) -> &mut VectorN<T, N> {
         &mut self.0
     }
 }
+
 impl<T: Scalar + Neg<Output = T>, N: Dim + DimName> DualN<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
