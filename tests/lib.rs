@@ -1,10 +1,10 @@
 extern crate dual_num;
 extern crate nalgebra as na;
 
-use na::{Matrix2x6, Matrix3x6, Matrix6, U3, U6, Vector2, Vector3, Vector6};
+use na::{Matrix2x6, Matrix3x6, Matrix6, Vector2, Vector3, Vector6, U3, U6};
 
 use dual_num::linalg::norm;
-use dual_num::{differentiate, Dual, Float, FloatConst};
+use dual_num::{differentiate, Dual, DualN, Float, FloatConst};
 use dual_num::{partials, partials_t};
 
 macro_rules! abs_within {
@@ -355,4 +355,16 @@ fn partials_no_param() {
         1e-20,
         format!("partial computation is incorrect -- here comes the delta: {}", dfdx - expected_dfdx)
     );
+}
+
+#[test]
+fn multivariate() {
+    // find partial derivative at x=4.0, y=5.0 for f(x,y)=x^2+sin(x*y)+y^3
+    let x: DualN<f64, U3> = DualN::from_slice(&[4.0, 1.0, 0.0]);
+    let y: DualN<f64, U3> = DualN::from_slice(&[5.0, 0.0, 1.0]);
+
+    let res = x * x + (x * y).sin() + y.powi(3);
+    zero_within!((res[0] - 141.91294525072763), 1e-13, format!("f(4, 5) incorrect"));
+    zero_within!((res[1] - 10.04041030906696), 1e-13, format!("df/dx(4, 5) incorrect"));
+    zero_within!((res[2] - 76.63232824725357), 1e-13, format!("df/dy(4, 5) incorrect"));
 }

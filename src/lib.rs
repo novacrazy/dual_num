@@ -178,15 +178,17 @@ where
     }
 }
 
-}
-
 impl<T: Scalar> AsMut<na::Vector2<T>> for Dual<T> {
     #[inline]
     fn as_mut(&mut self) -> &mut na::Vector2<T> {
         &mut self.0
     }
 }
-
+impl<T: Scalar + Neg<Output = T>, N: Dim + DimName> DualN<T, N>
+where
+    DefaultAllocator: Allocator<T, N>,
+    Owned<T, N>: Copy,
+{
     /// Returns the conjugate of the dual number.
     #[inline]
     pub fn conjugate(self) -> Self {
@@ -732,7 +734,7 @@ where
 macro_rules! impl_float_const {
     ($($c:ident),*) => {
         $(
-            fn $c() -> Dual<T> { Self::from_real(T::$c()) }
+            fn $c() -> DualN<T, N> { Self::from_real(T::$c()) }
         )*
     }
 }
