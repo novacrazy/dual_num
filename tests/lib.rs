@@ -60,6 +60,12 @@ fn derive() {
 
     let c = Dual::new(1.0 / 2f64.sqrt(), 1.0).asin();
     abs_within!(c.dual(), 1.414213562373095, std::f64::EPSILON, "incorrect d/dx arcsin");
+
+    let c = Dual::new(1.0 / 2f64.sqrt(), 1.0).acos();
+    abs_within!(c.dual(), -1.414213562373095, std::f64::EPSILON, "incorrect d/dx arccos");
+
+    let c = Dual::new(1.0 / 2f64.sqrt(), 1.0).atan();
+    abs_within!(c.dual(), 2.0f64 / 3.0f64, std::f64::EPSILON, "incorrect d/dx arctan");
 }
 
 #[test]

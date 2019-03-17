@@ -1061,7 +1061,7 @@ where
     #[inline]
     fn atan(self) -> Self {
         // TODO: implement inv
-        let c = (self.real().powi(2) + T::one()).sqrt();
+        let c = T::one() + self.real().powi(2);
         self.map_dual(self.real().atan(), |x| *x / c)
     }
 
