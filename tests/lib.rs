@@ -3,7 +3,7 @@ extern crate nalgebra as na;
 
 use na::{Matrix2x6, Matrix3x6, Matrix6, Vector2, Vector3, Vector6, VectorN, U3, U6, U7};
 
-use dual_num::linalg::norm;
+use dual_num::linalg::{hnorm, norm};
 use dual_num::{differentiate, Dual, DualN, Float, FloatConst, Hyperdual};
 use dual_num::{partials, partials_t, DimName, Zero};
 
@@ -387,13 +387,7 @@ fn free_grad() {
         let radius = state.fixed_rows::<U3>(0).into_owned();
         let velocity = state.fixed_rows::<U3>(3).into_owned();
 
-        let mut rmag = Hyperdual::<f64, U7>::zero();
-
-        for i in 0..U3::dim() {
-            rmag = rmag + radius[i].powi(2);
-        }
-
-        rmag = rmag.sqrt();
+        let rmag = hnorm(&radius);
 
         let body_acceleration = radius * (Hyperdual::<f64, U7>::from_real(-398_600.4415) / rmag.powi(3));
 
@@ -401,11 +395,11 @@ fn free_grad() {
         let mut grad = Matrix6::zeros();
         for i in 0..U6::dim() {
             fx[i] = if i < 3 { velocity[i].real() } else { body_acceleration[i - 3].real() };
-
             for j in 1..U7::dim() {
                 grad[(i, j - 1)] = if i < 3 { velocity[i][j] } else { body_acceleration[i - 3][j] };
             }
         }
+
         (fx, grad)
     }
 
@@ -428,8 +422,6 @@ fn free_grad() {
     ]);
 
     let (fx, grad) = eom(0.0, &hyperstate);
-
-    // let (fx, grad) = partials_t(0.0, state, eom);
 
     let expected_fx = Vector6::new(
         -3.28878900377057,
