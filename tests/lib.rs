@@ -1,11 +1,11 @@
 extern crate dual_num;
 extern crate nalgebra as na;
 
-use na::{Matrix2x6, Matrix3x6, Matrix6, Vector2, Vector3, Vector6, U3, U6};
+use na::{Matrix2x6, Matrix3x6, Matrix6, Vector2, Vector3, Vector6, VectorN, U3, U6, U7};
 
 use dual_num::linalg::norm;
 use dual_num::{differentiate, Dual, DualN, Float, FloatConst, Hyperdual};
-use dual_num::{partials, partials_t};
+use dual_num::{partials, partials_t, DimName, Zero};
 
 macro_rules! abs_within {
     ($x:expr, $val:expr, $eps:expr, $msg:expr) => {
@@ -370,7 +370,7 @@ fn partials_no_param() {
 fn multivariate() {
     // find partial derivative at x=4.0, y=5.0 for f(x,y)=x^2+sin(x*y)+y^3
     let x: Hyperdual<f64, U3> = Hyperdual::from_slice(&[4.0, 1.0, 0.0]);
-    // DualN and Hyperdual are interchangeable aliases. Hyperdual is the anme from Fike 2012
+    // DualN and Hyperdual are interchangeable aliases. Hyperdual is the name from Fike 2012
     // whereas multi-dual is from Revel et al. 2016.
     let y: DualN<f64, U3> = Hyperdual::from_slice(&[5.0, 0.0, 1.0]);
 
@@ -378,4 +378,84 @@ fn multivariate() {
     zero_within!((res[0] - 141.91294525072763), 1e-13, format!("f(4, 5) incorrect"));
     zero_within!((res[1] - 10.04041030906696), 1e-13, format!("df/dx(4, 5) incorrect"));
     zero_within!((res[2] - 76.63232824725357), 1e-13, format!("df/dy(4, 5) incorrect"));
+}
+
+#[test]
+fn free_grad() {
+    // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.
+    fn eom(_t: f64, state: &VectorN<Hyperdual<f64, U7>, U6>) -> (Vector6<f64>, Matrix6<f64>) {
+        let radius = state.fixed_rows::<U3>(0).into_owned();
+        let velocity = state.fixed_rows::<U3>(3).into_owned();
+
+        let mut rmag = Hyperdual::<f64, U7>::zero();
+
+        for i in 0..U3::dim() {
+            rmag = rmag + radius[i].powi(2);
+        }
+
+        rmag = rmag.sqrt();
+
+        let body_acceleration = radius * (Hyperdual::<f64, U7>::from_real(-398_600.4415) / rmag.powi(3));
+
+        let mut fx = Vector6::zeros();
+        let mut grad = Matrix6::zeros();
+        for i in 0..U6::dim() {
+            fx[i] = if i < 3 { velocity[i].real() } else { body_acceleration[i - 3].real() };
+
+            for j in 1..U7::dim() {
+                grad[(i, j - 1)] = if i < 3 { velocity[i][j] } else { body_acceleration[i - 3][j] };
+            }
+        }
+        (fx, grad)
+    }
+
+    let state = Vector6::new(
+        -9042.862233600335,
+        18536.333069123244,
+        6999.9570694864115,
+        -3.28878900377057,
+        -2.226285193102822,
+        1.6467383807226765,
+    );
+
+    let hyperstate = VectorN::<Hyperdual<f64, U7>, U6>::from_row_slice(&[
+        Hyperdual::<f64, U7>::from_slice(&[state[0], 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        Hyperdual::<f64, U7>::from_slice(&[state[1], 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]),
+        Hyperdual::<f64, U7>::from_slice(&[state[2], 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
+        Hyperdual::<f64, U7>::from_slice(&[state[3], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
+        Hyperdual::<f64, U7>::from_slice(&[state[4], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]),
+        Hyperdual::<f64, U7>::from_slice(&[state[5], 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
+    ]);
+
+    let (fx, grad) = eom(0.0, &hyperstate);
+
+    // let (fx, grad) = partials_t(0.0, state, eom);
+
+    let expected_fx = Vector6::new(
+        -3.28878900377057,
+        -2.226285193102822,
+        1.6467383807226765,
+        0.0003488751720191492,
+        -0.0007151349009902908,
+        -0.00027005954128877916,
+    );
+
+    zero_within!((fx - expected_fx).norm(), 1e-16, "f(x) computation is incorrect");
+
+    let mut expected = Matrix6::zeros();
+
+    expected[(0, 3)] = 1.0;
+    expected[(1, 4)] = 1.0;
+    expected[(2, 5)] = 1.0;
+    expected[(3, 0)] = -0.000000018628398676538285;
+    expected[(4, 0)] = -0.00000004089774775108092;
+    expected[(5, 0)] = -0.0000000154443965496673;
+    expected[(3, 1)] = -0.00000004089774775108092;
+    expected[(4, 1)] = 0.000000045253271751873843;
+    expected[(5, 1)] = 0.00000003165839212196757;
+    expected[(3, 2)] = -0.0000000154443965496673;
+    expected[(4, 2)] = 0.00000003165839212196757;
+    expected[(5, 2)] = -0.000000026624873075335538;
+
+    zero_within!((grad - expected).norm(), 1e-16, "gradient computation is incorrect");
 }
