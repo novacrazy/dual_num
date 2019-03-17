@@ -57,6 +57,9 @@ fn derive() {
 
     assert_eq!(x.real(), 6i32, "incorrect real");
     assert_eq!(x.dual(), 5i32, "incorrect real");
+
+    let c = Dual::new(1.0 / 2f64.sqrt(), 1.0).asin();
+    abs_within!(c.dual(), 1.414213562373095, std::f64::EPSILON, "incorrect d/dx arcsin");
 }
 
 #[test]
