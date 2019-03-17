@@ -7,7 +7,7 @@
 //! ```rust
 //! extern crate dual_num;
 //!
-//! use dual_num::{Dual, DualN, Float, differentiate, U3};
+//! use dual_num::{Dual, Hyperdual, Float, differentiate, U3};
 //!
 //! fn main() {
 //!     // find partial derivative at x=4.0
@@ -15,8 +15,8 @@
 //!     assert!((univariate - 0.25).abs() < 1e-16, "wrong derivative");
 //!
 //!     // find the partial derivatives of a multivariate function
-//!     let x: DualN<f64, U3> = DualN::from_slice(&[4.0, 1.0, 0.0]);
-//!     let y: DualN<f64, U3> = DualN::from_slice(&[5.0, 0.0, 1.0]);
+//!     let x: Hyperdual<f64, U3> = Hyperdual::from_slice(&[4.0, 1.0, 0.0]);
+//!     let y: Hyperdual<f64, U3> = Hyperdual::from_slice(&[5.0, 0.0, 1.0]);
 //!
 //!     let multivariate = x * x + (x * y).sin() + y.powi(3);
 //!     assert!((multivariate[0] - 141.91294525072763).abs() < 1e-13, "f(4, 5) incorrect");
@@ -67,33 +67,33 @@ pub use na::{DefaultAllocator, Dim, DimName};
 ///
 /// Lastly, the `Rem` remainder operator is not correctly or fully defined for `Dual`, and will panic.
 #[derive(Clone, Copy)]
-pub struct DualN<T: Scalar, N: Dim + DimName>(VectorN<T, N>)
+pub struct Hyperdual<T: Scalar, N: Dim + DimName>(VectorN<T, N>)
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy;
 
-impl<T: Scalar, N: Dim + DimName> DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     /// Create a new dual number from its real and dual parts.
     #[inline]
-    pub fn from_slice(v: &[T]) -> DualN<T, N> {
-        DualN(VectorN::<T, N>::from_row_slice(v))
+    pub fn from_slice(v: &[T]) -> Hyperdual<T, N> {
+        Hyperdual(VectorN::<T, N>::from_row_slice(v))
     }
 
     /// Create a new dual number from a real number.
     ///
     /// The dual part is set to zero.
     #[inline]
-    pub fn from_real(real: T) -> DualN<T, N>
+    pub fn from_real(real: T) -> Hyperdual<T, N>
     where
         T: Zero,
     {
         let mut dual = VectorN::<T, N>::zeros();
         dual[0] = real;
-        DualN(dual)
+        Hyperdual(dual)
     }
 
     /// Returns the real part
@@ -115,18 +115,18 @@ where
     }
 
     #[inline]
-    pub fn map_dual<F>(&self, r: T, f: F) -> DualN<T, N>
+    pub fn map_dual<F>(&self, r: T, f: F) -> Hyperdual<T, N>
     where
         F: Fn(&T) -> T,
     {
         // TODO: improve, so the real does not get mapped
         let mut v = self.map(|x| f(&x));
         v[0] = r;
-        DualN(v)
+        Hyperdual(v)
     }
 }
 
-impl<T: Scalar, N: Dim + DimName> Debug for DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> Debug for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -140,29 +140,29 @@ where
     }
 }
 
-impl<T: Scalar + Num + Zero, N: Dim + DimName> Default for DualN<T, N>
+impl<T: Scalar + Num + Zero, N: Dim + DimName> Default for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     #[inline]
-    fn default() -> DualN<T, N> {
-        DualN::zero()
+    fn default() -> Hyperdual<T, N> {
+        Hyperdual::zero()
     }
 }
 
-impl<T: Scalar + Zero, N: Dim + DimName> From<T> for DualN<T, N>
+impl<T: Scalar + Zero, N: Dim + DimName> From<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     #[inline]
-    fn from(real: T) -> DualN<T, N> {
-        DualN::from_real(real)
+    fn from(real: T) -> Hyperdual<T, N> {
+        Hyperdual::from_real(real)
     }
 }
 
-impl<T: Scalar, N: Dim + DimName> Deref for DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> Deref for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -175,7 +175,7 @@ where
     }
 }
 
-impl<T: Scalar, N: Dim + DimName> DerefMut for DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> DerefMut for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -186,7 +186,7 @@ where
     }
 }
 
-impl<T: Scalar, N: Dim + DimName> AsRef<VectorN<T, N>> for DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> AsRef<VectorN<T, N>> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -197,7 +197,7 @@ where
     }
 }
 
-impl<T: Scalar, N: Dim + DimName> AsMut<VectorN<T, N>> for DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> AsMut<VectorN<T, N>> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -208,7 +208,7 @@ where
     }
 }
 
-impl<T: Scalar + Neg<Output = T>, N: Dim + DimName> DualN<T, N>
+impl<T: Scalar + Neg<Output = T>, N: Dim + DimName> Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -220,7 +220,7 @@ where
     }
 }
 
-impl<T: Scalar + Display, N: Dim + DimName> Display for DualN<T, N>
+impl<T: Scalar + Display, N: Dim + DimName> Display for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -237,7 +237,7 @@ where
     }
 }
 
-impl<T: Scalar + PartialEq, N: Dim + DimName> PartialEq<Self> for DualN<T, N>
+impl<T: Scalar + PartialEq, N: Dim + DimName> PartialEq<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -248,7 +248,7 @@ where
     }
 }
 
-impl<T: Scalar + PartialOrd, N: Dim + DimName> PartialOrd<Self> for DualN<T, N>
+impl<T: Scalar + PartialOrd, N: Dim + DimName> PartialOrd<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -269,7 +269,7 @@ where
     }
 }
 
-impl<T: Scalar + PartialEq, N: Dim + DimName> PartialEq<T> for DualN<T, N>
+impl<T: Scalar + PartialEq, N: Dim + DimName> PartialEq<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -280,7 +280,7 @@ where
     }
 }
 
-impl<T: Scalar + PartialOrd, N: Dim + DimName> PartialOrd<T> for DualN<T, N>
+impl<T: Scalar + PartialOrd, N: Dim + DimName> PartialOrd<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -303,7 +303,7 @@ where
 
 macro_rules! impl_to_primitive {
     ($($name:ident, $ty:ty),*) => {
-        impl<T: Scalar + ToPrimitive, N: Dim + DimName> ToPrimitive for DualN<T, N>
+        impl<T: Scalar + ToPrimitive, N: Dim + DimName> ToPrimitive for Hyperdual<T, N>
             where
                 DefaultAllocator: Allocator<T, N>,
                 Owned<T, N>: Copy, {
@@ -319,15 +319,15 @@ macro_rules! impl_to_primitive {
 
 macro_rules! impl_from_primitive {
     ($($name:ident, $ty:ty),*) => {
-        impl<T: Scalar + FromPrimitive, N: Dim + DimName> FromPrimitive for DualN<T, N>
+        impl<T: Scalar + FromPrimitive, N: Dim + DimName> FromPrimitive for Hyperdual<T, N>
             where
                 T: Zero,
                 DefaultAllocator: Allocator<T, N>,
                 Owned<T, N>: Copy, {
             $(
                 #[inline]
-                fn $name(n: $ty) -> Option<DualN<T,N>> {
-                    T::$name(n).map(DualN::from_real)
+                fn $name(n: $ty) -> Option<Hyperdual<T,N>> {
+                    T::$name(n).map(Hyperdual::from_real)
                 }
             )*
         }
@@ -356,96 +356,96 @@ impl_primitive_cast! {
     to_f64,     from_f64    - f64
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Add<T> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Add<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
-    type Output = DualN<T, N>;
+    type Output = Hyperdual<T, N>;
 
     #[inline]
-    fn add(self, rhs: T) -> DualN<T, N> {
+    fn add(self, rhs: T) -> Hyperdual<T, N> {
         let mut d = self.clone();
         d[0] = d[0] + rhs;
         d
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> AddAssign<T> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> AddAssign<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     #[inline]
     fn add_assign(&mut self, rhs: T) {
-        *self = (*self) + DualN::from_real(rhs)
+        *self = (*self) + Hyperdual::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Sub<T> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Sub<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
-    type Output = DualN<T, N>;
+    type Output = Hyperdual<T, N>;
 
     #[inline]
-    fn sub(self, rhs: T) -> DualN<T, N> {
+    fn sub(self, rhs: T) -> Hyperdual<T, N> {
         let mut d = self.clone();
         d[0] = d[0] - rhs;
         d
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> SubAssign<T> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> SubAssign<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     #[inline]
     fn sub_assign(&mut self, rhs: T) {
-        *self = (*self) - DualN::from_real(rhs)
+        *self = (*self) - Hyperdual::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Mul<T> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Mul<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
-    type Output = DualN<T, N>;
+    type Output = Hyperdual<T, N>;
 
     #[inline]
-    fn mul(self, rhs: T) -> DualN<T, N> {
-        self * DualN::from_real(rhs)
+    fn mul(self, rhs: T) -> Hyperdual<T, N> {
+        self * Hyperdual::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> MulAssign<T> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> MulAssign<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     #[inline]
     fn mul_assign(&mut self, rhs: T) {
-        *self = (*self) * DualN::from_real(rhs)
+        *self = (*self) * Hyperdual::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Div<T> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Div<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
-    type Output = DualN<T, N>;
+    type Output = Hyperdual<T, N>;
 
     #[inline]
-    fn div(self, rhs: T) -> DualN<T, N> {
-        self / DualN::from_real(rhs)
+    fn div(self, rhs: T) -> Hyperdual<T, N> {
+        self / Hyperdual::from_real(rhs)
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> DivAssign<T> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> DivAssign<T> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -456,7 +456,7 @@ where
     }
 }
 
-impl<T: Scalar + Signed, N: Dim + DimName> Neg for DualN<T, N>
+impl<T: Scalar + Signed, N: Dim + DimName> Neg for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -465,11 +465,11 @@ where
 
     #[inline]
     fn neg(self) -> Self {
-        DualN(self.map(|x| x.neg()))
+        Hyperdual(self.map(|x| x.neg()))
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Add<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Add<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -478,11 +478,11 @@ where
 
     #[inline]
     fn add(self, rhs: Self) -> Self {
-        DualN(self.zip_map(&rhs, |x, y| x + y))
+        Hyperdual(self.zip_map(&rhs, |x, y| x + y))
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> AddAssign<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> AddAssign<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -493,7 +493,7 @@ where
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Sub<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Sub<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -502,11 +502,11 @@ where
 
     #[inline]
     fn sub(self, rhs: Self) -> Self {
-        DualN(self.zip_map(&rhs, |x, y| x - y))
+        Hyperdual(self.zip_map(&rhs, |x, y| x - y))
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> SubAssign<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> SubAssign<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -517,7 +517,7 @@ where
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Mul<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Mul<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -529,11 +529,11 @@ where
         // TODO: skip real part
         let mut v = self.zip_map(&rhs, |x, y| rhs.real() * x + self.real() * y);
         v[0] = self.real() * rhs.real();
-        DualN(v)
+        Hyperdual(v)
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> MulAssign<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> MulAssign<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -547,10 +547,10 @@ where
 macro_rules! impl_mul_add {
     ($(<$a:ident, $b:ident>),*) => {
         $(
-            impl<T: Scalar + Num + Mul + Add, N: Dim + DimName> MulAdd<$a, $b> for DualN<T,N>where
+            impl<T: Scalar + Num + Mul + Add, N: Dim + DimName> MulAdd<$a, $b> for Hyperdual<T,N>where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy, {
-                type Output = DualN<T,N>;
+                type Output = Hyperdual<T,N>;
 
                 #[inline]
                 fn mul_add(self, a: $a, b: $b) -> Self {
@@ -558,7 +558,7 @@ macro_rules! impl_mul_add {
                 }
             }
 
-            impl<T: Scalar + Num + Mul + Add, N: Dim + DimName> MulAddAssign<$a, $b> for DualN<T,N>where
+            impl<T: Scalar + Num + Mul + Add, N: Dim + DimName> MulAddAssign<$a, $b> for Hyperdual<T,N>where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy, {
                 #[inline]
@@ -577,7 +577,7 @@ impl_mul_add! {
     <T, T>
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Div<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Div<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -592,11 +592,11 @@ where
         // TODO: skip real part
         let mut v = self.zip_map(&rhs, |x, y| (rhs.real() * x - self.real() * y) / d);
         v[0] = self.real() / rhs.real();
-        DualN(v)
+        Hyperdual(v)
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> DivAssign<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> DivAssign<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -607,7 +607,7 @@ where
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Rem<Self> for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Rem<Self> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -623,9 +623,9 @@ where
     }
 }
 
-impl<T: Scalar, P: Into<DualN<T, N>>, N: Dim + DimName> Pow<P> for DualN<T, N>
+impl<T: Scalar, P: Into<Hyperdual<T, N>>, N: Dim + DimName> Pow<P> for Hyperdual<T, N>
 where
-    DualN<T, N>: Float,
+    Hyperdual<T, N>: Float,
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
@@ -637,7 +637,7 @@ where
     }
 }
 
-impl<T: Scalar, N: Dim + DimName> Inv for DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> Inv for Hyperdual<T, N>
 where
     Self: One + Div<Output = Self>,
     DefaultAllocator: Allocator<T, N>,
@@ -651,7 +651,7 @@ where
     }
 }
 
-impl<T: Scalar, N: Dim + DimName> Signed for DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> Signed for Hyperdual<T, N>
 where
     T: Signed + PartialOrd,
     DefaultAllocator: Allocator<T, N>,
@@ -660,7 +660,7 @@ where
     #[inline]
     fn abs(&self) -> Self {
         let s = self.real().signum();
-        DualN(self.map(|x| x * s))
+        Hyperdual(self.map(|x| x * s))
     }
 
     #[inline]
@@ -688,7 +688,7 @@ where
     }
 }
 
-impl<T: Scalar + Unsigned, N: Dim + DimName> Unsigned for DualN<T, N>
+impl<T: Scalar + Unsigned, N: Dim + DimName> Unsigned for Hyperdual<T, N>
 where
     Self: Num,
     DefaultAllocator: Allocator<T, N>,
@@ -696,14 +696,14 @@ where
 {
 }
 
-impl<T: Scalar + Num + Zero, N: Dim + DimName> Zero for DualN<T, N>
+impl<T: Scalar + Num + Zero, N: Dim + DimName> Zero for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     #[inline]
-    fn zero() -> DualN<T, N> {
-        DualN::from_real(T::zero())
+    fn zero() -> Hyperdual<T, N> {
+        Hyperdual::from_real(T::zero())
     }
 
     #[inline]
@@ -712,14 +712,14 @@ where
     }
 }
 
-impl<T: Scalar + Num + One, N: Dim + DimName> One for DualN<T, N>
+impl<T: Scalar + Num + One, N: Dim + DimName> One for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     #[inline]
-    fn one() -> DualN<T, N> {
-        DualN::from_real(T::one())
+    fn one() -> Hyperdual<T, N> {
+        Hyperdual::from_real(T::one())
     }
 
     #[inline]
@@ -731,7 +731,7 @@ where
     }
 }
 
-impl<T: Scalar + Num, N: Dim + DimName> Num for DualN<T, N>
+impl<T: Scalar + Num, N: Dim + DimName> Num for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -739,18 +739,18 @@ where
     type FromStrRadixErr = <T as Num>::FromStrRadixErr;
 
     #[inline]
-    fn from_str_radix(str: &str, radix: u32) -> Result<DualN<T, N>, Self::FromStrRadixErr> {
+    fn from_str_radix(str: &str, radix: u32) -> Result<Hyperdual<T, N>, Self::FromStrRadixErr> {
         <T as Num>::from_str_radix(str, radix).map(Self::from_real)
     }
 }
 
-impl<T: Scalar + Float, N: Dim + DimName> NumCast for DualN<T, N>
+impl<T: Scalar + Float, N: Dim + DimName> NumCast for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
     #[inline]
-    fn from<P: ToPrimitive>(n: P) -> Option<DualN<T, N>> {
+    fn from<P: ToPrimitive>(n: P) -> Option<Hyperdual<T, N>> {
         <T as NumCast>::from(n).map(Self::from_real)
     }
 }
@@ -758,12 +758,12 @@ where
 macro_rules! impl_float_const {
     ($($c:ident),*) => {
         $(
-            fn $c() -> DualN<T, N> { Self::from_real(T::$c()) }
+            fn $c() -> Hyperdual<T, N> { Self::from_real(T::$c()) }
         )*
     }
 }
 
-impl<T: Scalar + FloatConst + Zero, N: Dim + DimName> FloatConst for DualN<T, N>
+impl<T: Scalar + FloatConst + Zero, N: Dim + DimName> FloatConst for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
@@ -823,52 +823,52 @@ macro_rules! impl_boolean_op {
 macro_rules! impl_real_op {
     ($($op:ident),*) => {
         $(
-            fn $op(self) -> Self { DualN::from_real(self.real().$op()) }
+            fn $op(self) -> Self { Hyperdual::from_real(self.real().$op()) }
         )*
     }
 }
 
-impl<T: Scalar + Num + Zero, N: Dim + DimName> Sum for DualN<T, N>
+impl<T: Scalar + Num + Zero, N: Dim + DimName> Sum for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
-    fn sum<I: Iterator<Item = DualN<T, N>>>(iter: I) -> DualN<T, N> {
-        iter.fold(DualN::zero(), |a, b| a + b)
+    fn sum<I: Iterator<Item = Hyperdual<T, N>>>(iter: I) -> Hyperdual<T, N> {
+        iter.fold(Hyperdual::zero(), |a, b| a + b)
     }
 }
 
-impl<'a, T: Scalar + Num + Zero, N: Dim + DimName> Sum<&'a DualN<T, N>> for DualN<T, N>
+impl<'a, T: Scalar + Num + Zero, N: Dim + DimName> Sum<&'a Hyperdual<T, N>> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
-    fn sum<I: Iterator<Item = &'a DualN<T, N>>>(iter: I) -> DualN<T, N> {
-        iter.fold(DualN::zero(), |a, b| a + *b)
+    fn sum<I: Iterator<Item = &'a Hyperdual<T, N>>>(iter: I) -> Hyperdual<T, N> {
+        iter.fold(Hyperdual::zero(), |a, b| a + *b)
     }
 }
 
-impl<T: Scalar + Num + One, N: Dim + DimName> Product for DualN<T, N>
+impl<T: Scalar + Num + One, N: Dim + DimName> Product for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
-    fn product<I: Iterator<Item = DualN<T, N>>>(iter: I) -> DualN<T, N> {
-        iter.fold(DualN::one(), |a, b| a * b)
+    fn product<I: Iterator<Item = Hyperdual<T, N>>>(iter: I) -> Hyperdual<T, N> {
+        iter.fold(Hyperdual::one(), |a, b| a * b)
     }
 }
 
-impl<'a, T: Scalar + Num + One, N: Dim + DimName> Product<&'a DualN<T, N>> for DualN<T, N>
+impl<'a, T: Scalar + Num + One, N: Dim + DimName> Product<&'a Hyperdual<T, N>> for Hyperdual<T, N>
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy,
 {
-    fn product<I: Iterator<Item = &'a DualN<T, N>>>(iter: I) -> DualN<T, N> {
-        iter.fold(DualN::one(), |a, b| a * *b)
+    fn product<I: Iterator<Item = &'a Hyperdual<T, N>>>(iter: I) -> Hyperdual<T, N> {
+        iter.fold(Hyperdual::one(), |a, b| a * *b)
     }
 }
 
-impl<T: Scalar, N: Dim + DimName> Float for DualN<T, N>
+impl<T: Scalar, N: Dim + DimName> Float for Hyperdual<T, N>
 where
     T: Float + Signed + FloatConst,
     DefaultAllocator: Allocator<T, N>,
@@ -907,7 +907,7 @@ where
     #[inline]
     fn abs(self) -> Self {
         let s = self.real().signum();
-        DualN(self.map(|x| x * s))
+        Hyperdual(self.map(|x| x * s))
     }
 
     #[inline]
@@ -939,7 +939,7 @@ where
 
     #[inline]
     fn mul_add(self, a: Self, b: Self) -> Self {
-        let mut dual = DualN::from_real(self.real().mul_add(a.real(), b.real()));
+        let mut dual = Hyperdual::from_real(self.real().mul_add(a.real(), b.real()));
 
         for x in 1..self.len() {
             dual[x] = self[x] * a.real() + self.real() * a[x] + b[x];
@@ -969,7 +969,7 @@ where
 
         let mut v = self.zip_map(&n, |x, y| a * x + b * y);
         v[0] = c;
-        DualN(v)
+        Hyperdual(v)
     }
 
     #[inline]
@@ -1022,7 +1022,7 @@ where
         let c = self.real().hypot(other.real());
         let mut v = self.zip_map(&other, |x, y| (self.real() * y + other.real() * x) / c);
         v[0] = c;
-        DualN(v)
+        Hyperdual(v)
     }
 
     #[inline]
@@ -1070,7 +1070,7 @@ where
         let c = self.real().powi(2) + other.real().powi(2);
         let mut v = self.zip_map(&other, |x, y| (other.real() * x - self.real() * y) / c);
         v[0] = self.real().atan2(other.real());
-        DualN(v)
+        Hyperdual(v)
     }
 
     #[inline]
@@ -1137,19 +1137,19 @@ where
 
     #[inline]
     fn to_degrees(self) -> Self {
-        DualN::from_real(self.real().to_degrees())
+        Hyperdual::from_real(self.real().to_degrees())
     }
 
     #[inline]
     fn to_radians(self) -> Self {
-        DualN::from_real(self.real().to_radians())
+        Hyperdual::from_real(self.real().to_radians())
     }
 }
 
 // TODO
-// impl<T: na::Real> na::Real for DualN<T,N> {}
+// impl<T: na::Real> na::Real for Hyperdual<T,N> {}
 
-pub type Dual<T> = DualN<T, U2>;
+pub type Dual<T> = Hyperdual<T, U2>;
 
 impl<T: Scalar> Dual<T> {
     #[inline]
@@ -1162,3 +1162,5 @@ impl<T: Scalar> Dual<T> {
         self[1]
     }
 }
+
+pub type DualN<T, N> = Hyperdual<T, N>;

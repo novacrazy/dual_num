@@ -4,7 +4,7 @@ extern crate nalgebra as na;
 use na::{Matrix2x6, Matrix3x6, Matrix6, Vector2, Vector3, Vector6, U3, U6};
 
 use dual_num::linalg::norm;
-use dual_num::{differentiate, Dual, DualN, Float, FloatConst};
+use dual_num::{differentiate, Dual, DualN, Float, FloatConst, Hyperdual};
 use dual_num::{partials, partials_t};
 
 macro_rules! abs_within {
@@ -369,8 +369,10 @@ fn partials_no_param() {
 #[test]
 fn multivariate() {
     // find partial derivative at x=4.0, y=5.0 for f(x,y)=x^2+sin(x*y)+y^3
-    let x: DualN<f64, U3> = DualN::from_slice(&[4.0, 1.0, 0.0]);
-    let y: DualN<f64, U3> = DualN::from_slice(&[5.0, 0.0, 1.0]);
+    let x: Hyperdual<f64, U3> = Hyperdual::from_slice(&[4.0, 1.0, 0.0]);
+    // DualN and Hyperdual are interchangeable aliases. Hyperdual is the anme from Fike 2012
+    // whereas multi-dual is from Revel et al. 2016.
+    let y: DualN<f64, U3> = Hyperdual::from_slice(&[5.0, 0.0, 1.0]);
 
     let res = x * x + (x * y).sin() + y.powi(3);
     zero_within!((res[0] - 141.91294525072763), 1e-13, format!("f(4, 5) incorrect"));

@@ -8,7 +8,7 @@ Fully-featured Dual Number implementation with features for automatic differenti
 ```rust
 extern crate dual_num;
 
-use dual_num::{Dual, DualN, Float, differentiate, U3};
+use dual_num::{Dual, Hyperdual, Float, differentiate, U3};
 
 fn main() {
     // find partial derivative at x=4.0
@@ -16,8 +16,8 @@ fn main() {
     assert!((univariate - 0.4500).abs() < 1e-16, "wrong derivative");
 
     // find the partial derivatives of a multivariate function
-    let x: DualN<f64, U3> = DualN::from_slice(&[4.0, 1.0, 0.0]);
-    let y: DualN<f64, U3> = DualN::from_slice(&[5.0, 0.0, 1.0]);
+    let x: Hyperdual<f64, U3> = Hyperdual::from_slice(&[4.0, 1.0, 0.0]);
+    let y: Hyperdual<f64, U3> = Hyperdual::from_slice(&[5.0, 0.0, 1.0]);
 
     let multivariate = x * x + (x * y).sin() + y.powi(3);
     assert!((res[0] - 141.91294525072763).abs() < 1e-13, "f(4, 5) incorrect");
