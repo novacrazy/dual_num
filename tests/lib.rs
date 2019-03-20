@@ -3,9 +3,8 @@ extern crate nalgebra as na;
 
 use na::{Matrix2x6, Matrix6, Vector2, Vector3, Vector6, VectorN, U2, U3, U6, U7};
 
-use dual_num::linalg::{hnorm, norm};
-use dual_num::{differentiate, Dual, DualN, Float, FloatConst, Hyperdual};
-use dual_num::{partials, DimName};
+use dual_num::linalg::norm;
+use dual_num::{differentiate, hyperspace_from_vector, DimName, Dual, DualN, Float, FloatConst, Hyperdual};
 
 macro_rules! abs_within {
     ($x:expr, $val:expr, $eps:expr, $msg:expr) => {
@@ -183,12 +182,12 @@ fn state_gradient() {
         let velocity = state.fixed_rows::<U3>(3).into_owned();
 
         // Code up math as usual
-        let rmag = hnorm(&radius);
+        let rmag = norm(&radius);
         let body_acceleration = radius * (Hyperdual::<f64, U7>::from_real(-398_600.4415) / rmag.powi(3));
 
         // Added for inspection only
-        dbg!(velocity);
-        dbg!(body_acceleration);
+        println!("velocity = {}", velocity);
+        println!("body_acceleration = {}", body_acceleration);
 
         // Extract result into Vector6 and Matrix6
         let mut fx = Vector6::zeros();
@@ -212,14 +211,11 @@ fn state_gradient() {
         1.6467383807226765,
     );
 
-    let hyperstate = VectorN::<Hyperdual<f64, U7>, U6>::from_row_slice(&[
-        Hyperdual::<f64, U7>::from_slice(&[state[0], 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[state[1], 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[state[2], 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[state[3], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[state[4], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[state[5], 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
-    ]);
+    // Create a hyperdual space which allows for first derivatives.
+    let hyperstate = hyperspace_from_vector(&state);
+
+    // Added for inspection
+    println!("hyperstate = {}", hyperstate);
 
     let (fx, grad) = eom(0.0, &hyperstate);
 
@@ -261,13 +257,13 @@ fn state_partials() {
         let velocity_vec = state.fixed_rows::<U3>(3).into_owned();
 
         // Code up math as usual
-        let delta_v_vec = velocity_vec / hnorm(&range_vec);
-        let range = hnorm(&range_vec);
+        let delta_v_vec = velocity_vec / norm(&range_vec);
+        let range = norm(&range_vec);
         let range_rate = range_vec.dot(&delta_v_vec);
 
         // Added for inspection only
-        dbg!(range);
-        dbg!(range_rate);
+        println!("range = {}", range);
+        println!("range_rate = {}", range_rate);
 
         // Extract result into Vector2 and Matrix2x6
         let mut fx = Vector2::zeros();
@@ -291,14 +287,10 @@ fn state_partials() {
         1.64403461052706378886512084136484,
     );
 
-    let hyperstate = VectorN::<Hyperdual<f64, U7>, U6>::from_row_slice(&[
-        Hyperdual::<f64, U7>::from_slice(&[vec[0], 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[vec[1], 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[vec[2], 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[vec[3], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[vec[4], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]),
-        Hyperdual::<f64, U7>::from_slice(&[vec[5], 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
-    ]);
+    let hyperstate = hyperspace_from_vector(&vec);
+
+    // Added for inspection
+    println!("hyperstate = {}", hyperstate);
 
     let (fx, dfdx) = sensitivity(&hyperstate);
 
