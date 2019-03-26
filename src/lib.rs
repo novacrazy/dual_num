@@ -109,7 +109,6 @@ where
     }
 
     /// Returns a mutable reference to the real part
-    #[inline]
     pub fn real_mut(&mut self) -> &mut T {
         &mut self[0]
     }
@@ -123,6 +122,15 @@ where
         let mut v = self.map(|x| f(&x));
         v[0] = r;
         Hyperdual(v)
+    }
+
+    /// Create a new dual number from a function
+    #[inline]
+    pub fn from_fn<F>(mut f: F) -> Hyperdual<T, N>
+    where
+        F: FnMut(usize) -> T,
+    {
+        Hyperdual(VectorN::<T, N>::from_fn(|i, _| f(i)))
     }
 }
 
@@ -1176,3 +1184,23 @@ impl<T: Scalar> Dual<T> {
 }
 
 pub type DualN<T, N> = Hyperdual<T, N>;
+
+pub fn hyperspace_from_vector<T: Scalar + Num + Zero, D: Dim + DimName, N: Dim + DimName>(v: &VectorN<T, N>) -> VectorN<Hyperdual<T, D>, N>
+where
+    DefaultAllocator: Allocator<T, D> + Allocator<T, N> + Allocator<Hyperdual<T, D>, N>,
+    Owned<T, D>: Copy,
+{
+    let mut space_slice = vec![Hyperdual::<T, D>::zero(); N::dim()];
+    for i in 0..N::dim() {
+        space_slice[i] = Hyperdual::<T, D>::from_fn(|j| {
+            if j == 0 {
+                v[i]
+            } else if i + 1 == j {
+                T::one()
+            } else {
+                T::zero()
+            }
+        });
+    }
+    VectorN::<Hyperdual<T, D>, N>::from_row_slice(&space_slice)
+}

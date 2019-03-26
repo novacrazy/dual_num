@@ -1,11 +1,10 @@
 extern crate dual_num;
 extern crate nalgebra as na;
 
-use na::{Matrix2x6, Matrix3x6, Matrix6, Vector2, Vector3, Vector6, U3, U6};
+use na::{Matrix2x6, Matrix6, Vector2, Vector3, Vector6, VectorN, U2, U3, U6, U7};
 
 use dual_num::linalg::norm;
-use dual_num::{differentiate, Dual, DualN, Float, FloatConst, Hyperdual};
-use dual_num::{partials, partials_t};
+use dual_num::{differentiate, hyperspace_from_vector, DimName, Dual, DualN, Float, FloatConst, Hyperdual};
 
 macro_rules! abs_within {
     ($x:expr, $val:expr, $eps:expr, $msg:expr) => {
@@ -121,148 +120,6 @@ fn dual_operations() {
 }
 
 #[test]
-fn square_gradient_no_param() {
-    // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.
-    fn eom(state: &Matrix6<Dual<f64>>) -> Matrix6<Dual<f64>> {
-        let radius = state.fixed_slice::<U3, U6>(0, 0).into_owned();
-        let velocity = state.fixed_slice::<U3, U6>(3, 0).into_owned();
-
-        let mut body_acceleration = Matrix3x6::zeros();
-
-        for i in 0..3 {
-            let this_norm = norm(&Vector3::new(radius[(0, i)], radius[(1, i)], radius[(2, i)]));
-            let body_acceleration_f = Dual::from_real(-398_600.4415) / this_norm.powi(3);
-
-            let this_body_acceleration = Vector3::new(
-                radius[(0, i)] * body_acceleration_f,
-                radius[(1, i)] * body_acceleration_f,
-                radius[(2, i)] * body_acceleration_f,
-            );
-
-            body_acceleration.set_column(i, &this_body_acceleration);
-        }
-
-        let mut rtn = Matrix6::zeros();
-
-        for i in 0..6 {
-            if i < 3 {
-                rtn.set_row(i, &velocity.row(i));
-            } else {
-                rtn.set_row(i, &body_acceleration.row(i - 3));
-            }
-        }
-        rtn
-    }
-
-    let state = Vector6::new(
-        -9042.862233600335,
-        18536.333069123244,
-        6999.9570694864115,
-        -3.28878900377057,
-        -2.226285193102822,
-        1.6467383807226765,
-    );
-
-    let (fx, grad) = partials(state, eom);
-
-    let expected_fx = Vector6::new(
-        -3.28878900377057,
-        -2.226285193102822,
-        1.6467383807226765,
-        0.0003488751720191492,
-        -0.0007151349009902908,
-        -0.00027005954128877916,
-    );
-
-    zero_within!((fx - expected_fx).norm(), 1e-16, "f(x) computation is incorrect");
-
-    let mut expected = Matrix6::zeros();
-
-    expected[(0, 3)] = 1.0;
-    expected[(1, 4)] = 1.0;
-    expected[(2, 5)] = 1.0;
-    expected[(3, 0)] = -0.000000018628398676538285;
-    expected[(4, 0)] = -0.00000004089774775108092;
-    expected[(5, 0)] = -0.0000000154443965496673;
-    expected[(3, 1)] = -0.00000004089774775108092;
-    expected[(4, 1)] = 0.000000045253271751873843;
-    expected[(5, 1)] = 0.00000003165839212196757;
-    expected[(3, 2)] = -0.0000000154443965496673;
-    expected[(4, 2)] = 0.00000003165839212196757;
-    expected[(5, 2)] = -0.000000026624873075335538;
-
-    zero_within!((grad - expected).norm(), 1e-16, "gradient computation is incorrect");
-}
-
-#[test]
-fn square_gradient_with_param() {
-    // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.
-    fn eom(_t: f64, state: &Matrix6<Dual<f64>>) -> Matrix6<Dual<f64>> {
-        let radius = state.fixed_slice::<U3, U6>(0, 0).into_owned();
-        let velocity = state.fixed_slice::<U3, U6>(3, 0).into_owned();
-
-        let mut body_acceleration = Matrix3x6::zeros();
-
-        for i in 0..3 {
-            let this_radius = Vector3::new(radius[(0, i)], radius[(1, i)], radius[(2, i)]);
-            let this_norm = norm(&this_radius);
-            let this_body_acceleration = this_radius * Dual::from_real(-398_600.4415) / this_norm.powi(3);
-            body_acceleration.set_column(i, &this_body_acceleration);
-        }
-
-        let mut rtn = Matrix6::zeros();
-
-        for i in 0..6 {
-            if i < 3 {
-                rtn.set_row(i, &velocity.row(i));
-            } else {
-                rtn.set_row(i, &body_acceleration.row(i - 3));
-            }
-        }
-        rtn
-    }
-
-    let state = Vector6::new(
-        -9042.862233600335,
-        18536.333069123244,
-        6999.9570694864115,
-        -3.28878900377057,
-        -2.226285193102822,
-        1.6467383807226765,
-    );
-
-    let (fx, grad) = partials_t(0.0, state, eom);
-
-    let expected_fx = Vector6::new(
-        -3.28878900377057,
-        -2.226285193102822,
-        1.6467383807226765,
-        0.0003488751720191492,
-        -0.0007151349009902908,
-        -0.00027005954128877916,
-    );
-
-    zero_within!((fx - expected_fx).norm(), 1e-16, "f(x) computation is incorrect");
-
-    let mut expected = Matrix6::zeros();
-
-    expected[(0, 3)] = 1.0;
-    expected[(1, 4)] = 1.0;
-    expected[(2, 5)] = 1.0;
-    expected[(3, 0)] = -0.000000018628398676538285;
-    expected[(4, 0)] = -0.00000004089774775108092;
-    expected[(5, 0)] = -0.0000000154443965496673;
-    expected[(3, 1)] = -0.00000004089774775108092;
-    expected[(4, 1)] = 0.000000045253271751873843;
-    expected[(5, 1)] = 0.00000003165839212196757;
-    expected[(3, 2)] = -0.0000000154443965496673;
-    expected[(4, 2)] = 0.00000003165839212196757;
-    expected[(5, 2)] = -0.000000026624873075335538;
-
-    zero_within!((grad - expected).norm(), 1e-16, "gradient computation is incorrect");
-}
-
-#[test]
 fn linalg() {
     // NOTE: Due to the implementation of std::ops::Mul in nalgebra, the syntax _must_ be vec * x
     // where x is the scalar and vec the vector.
@@ -303,29 +160,122 @@ fn linalg() {
 }
 
 #[test]
-fn partials_no_param() {
-    // This is an example of the sensitivity matrix (H tilde) of a ranging method.
-    fn sensitivity(state: &Matrix6<Dual<f64>>) -> Matrix2x6<Dual<f64>> {
-        let range_mat = state.fixed_slice::<U3, U6>(0, 0).into_owned();
-        let velocity_mat = state.fixed_slice::<U3, U6>(3, 0).into_owned();
-        let mut range_slice = Vec::with_capacity(6);
-        let mut range_rate_slice = Vec::with_capacity(6);
+fn multivariate() {
+    // find partial derivative at x=4.0, y=5.0 for f(x,y)=x^2+sin(x*y)+y^3
+    let x: Hyperdual<f64, U3> = Hyperdual::from_slice(&[4.0, 1.0, 0.0]);
+    // DualN and Hyperdual are interchangeable aliases. Hyperdual is the name from Fike 2012
+    // whereas multi-dual is from Revel et al. 2016.
+    let y: DualN<f64, U3> = Hyperdual::from_slice(&[5.0, 0.0, 1.0]);
 
-        for j in 0..6 {
-            let rho_vec = Vector3::new(range_mat[(0, j)], range_mat[(1, j)], range_mat[(2, j)]);
-            let range = norm(&rho_vec);
-            let delta_v_vec = (Vector3::new(velocity_mat[(0, j)], velocity_mat[(1, j)], velocity_mat[(2, j)])) / range;
-            let rho_dot = rho_vec.dot(&delta_v_vec);
+    let res = x * x + (x * y).sin() + y.powi(3);
+    zero_within!((res[0] - 141.91294525072763), 1e-13, format!("f(4, 5) incorrect"));
+    zero_within!((res[1] - 10.04041030906696), 1e-13, format!("df/dx(4, 5) incorrect"));
+    zero_within!((res[2] - 76.63232824725357), 1e-13, format!("df/dy(4, 5) incorrect"));
+}
 
-            range_slice.push(range);
-            range_rate_slice.push(rho_dot);
+#[test]
+fn state_gradient() {
+    // This is an example of the equation of motion gradient for a spacecrate in a two body acceleration.
+    fn eom(_t: f64, state: &VectorN<Hyperdual<f64, U7>, U6>) -> (Vector6<f64>, Matrix6<f64>) {
+        // Extract data from hyperspace
+        let radius = state.fixed_rows::<U3>(0).into_owned();
+        let velocity = state.fixed_rows::<U3>(3).into_owned();
+
+        // Code up math as usual
+        let rmag = norm(&radius);
+        let body_acceleration = radius * (Hyperdual::<f64, U7>::from_real(-398_600.4415) / rmag.powi(3));
+
+        // Added for inspection only
+        println!("velocity = {}", velocity);
+        println!("body_acceleration = {}", body_acceleration);
+
+        // Extract result into Vector6 and Matrix6
+        let mut fx = Vector6::zeros();
+        let mut grad = Matrix6::zeros();
+        for i in 0..U6::dim() {
+            fx[i] = if i < 3 { velocity[i].real() } else { body_acceleration[i - 3].real() };
+            for j in 1..U7::dim() {
+                grad[(i, j - 1)] = if i < 3 { velocity[i][j] } else { body_acceleration[i - 3][j] };
+            }
         }
 
-        let mut rtn = Matrix2x6::zeros();
+        (fx, grad)
+    }
 
-        rtn.set_row(0, &Vector6::from_row_slice(&range_slice).transpose());
-        rtn.set_row(1, &Vector6::from_row_slice(&range_rate_slice).transpose());
-        rtn
+    let state = Vector6::new(
+        -9042.862233600335,
+        18536.333069123244,
+        6999.9570694864115,
+        -3.28878900377057,
+        -2.226285193102822,
+        1.6467383807226765,
+    );
+
+    // Create a hyperdual space which allows for first derivatives.
+    let hyperstate = hyperspace_from_vector(&state);
+
+    // Added for inspection
+    println!("hyperstate = {}", hyperstate);
+
+    let (fx, grad) = eom(0.0, &hyperstate);
+
+    let expected_fx = Vector6::new(
+        -3.28878900377057,
+        -2.226285193102822,
+        1.6467383807226765,
+        0.0003488751720191492,
+        -0.0007151349009902908,
+        -0.00027005954128877916,
+    );
+
+    zero_within!((fx - expected_fx).norm(), 1e-16, "f(x) computation is incorrect");
+
+    let mut expected = Matrix6::zeros();
+
+    expected[(0, 3)] = 1.0;
+    expected[(1, 4)] = 1.0;
+    expected[(2, 5)] = 1.0;
+    expected[(3, 0)] = -0.000000018628398676538285;
+    expected[(4, 0)] = -0.00000004089774775108092;
+    expected[(5, 0)] = -0.0000000154443965496673;
+    expected[(3, 1)] = -0.00000004089774775108092;
+    expected[(4, 1)] = 0.000000045253271751873843;
+    expected[(5, 1)] = 0.00000003165839212196757;
+    expected[(3, 2)] = -0.0000000154443965496673;
+    expected[(4, 2)] = 0.00000003165839212196757;
+    expected[(5, 2)] = -0.000000026624873075335538;
+
+    zero_within!((grad - expected).norm(), 1e-16, "gradient computation is incorrect");
+}
+
+#[test]
+fn state_partials() {
+    // This is an example of the sensitivity matrix (H tilde) of a ranging method.
+    fn sensitivity(state: &VectorN<Hyperdual<f64, U7>, U6>) -> (Vector2<f64>, Matrix2x6<f64>) {
+        // Extract data from hyperspace
+        let range_vec = state.fixed_rows::<U3>(0).into_owned();
+        let velocity_vec = state.fixed_rows::<U3>(3).into_owned();
+
+        // Code up math as usual
+        let delta_v_vec = velocity_vec / norm(&range_vec);
+        let range = norm(&range_vec);
+        let range_rate = range_vec.dot(&delta_v_vec);
+
+        // Added for inspection only
+        println!("range = {}", range);
+        println!("range_rate = {}", range_rate);
+
+        // Extract result into Vector2 and Matrix2x6
+        let mut fx = Vector2::zeros();
+        let mut pmat = Matrix2x6::zeros();
+        for i in 0..U2::dim() {
+            fx[i] = if i == 0 { range.real() } else { range_rate.real() };
+            for j in 1..U7::dim() {
+                pmat[(i, j - 1)] = if i == 0 { range[j] } else { range_rate[j] };
+            }
+        }
+
+        (fx, pmat)
     }
 
     let vec = Vector6::new(
@@ -337,7 +287,12 @@ fn partials_no_param() {
         1.64403461052706378886512084136484,
     );
 
-    let (fx, dfdx) = partials(vec, sensitivity);
+    let hyperstate = hyperspace_from_vector(&vec);
+
+    // Added for inspection
+    println!("hyperstate = {}", hyperstate);
+
+    let (fx, dfdx) = sensitivity(&hyperstate);
 
     let expected_fx = Vector2::new(18831.82547853717, 0.2538107291309079);
 
@@ -348,7 +303,6 @@ fn partials_no_param() {
     );
 
     let mut expected_dfdx = Matrix2x6::zeros();
-
     expected_dfdx[(0, 0)] = 0.23123905265689662091;
     expected_dfdx[(0, 1)] = 0.96061804457024613235;
     expected_dfdx[(0, 2)] = 0.15408268225981000543;
@@ -364,18 +318,4 @@ fn partials_no_param() {
         1e-20,
         format!("partial computation is incorrect -- here comes the delta: {}", dfdx - expected_dfdx)
     );
-}
-
-#[test]
-fn multivariate() {
-    // find partial derivative at x=4.0, y=5.0 for f(x,y)=x^2+sin(x*y)+y^3
-    let x: Hyperdual<f64, U3> = Hyperdual::from_slice(&[4.0, 1.0, 0.0]);
-    // DualN and Hyperdual are interchangeable aliases. Hyperdual is the anme from Fike 2012
-    // whereas multi-dual is from Revel et al. 2016.
-    let y: DualN<f64, U3> = Hyperdual::from_slice(&[5.0, 0.0, 1.0]);
-
-    let res = x * x + (x * y).sin() + y.powi(3);
-    zero_within!((res[0] - 141.91294525072763), 1e-13, format!("f(4, 5) incorrect"));
-    zero_within!((res[1] - 10.04041030906696), 1e-13, format!("df/dx(4, 5) incorrect"));
-    zero_within!((res[2] - 76.63232824725357), 1e-13, format!("df/dy(4, 5) incorrect"));
 }

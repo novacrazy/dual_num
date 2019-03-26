@@ -1,19 +1,19 @@
 use na::allocator::Allocator;
-use na::{DefaultAllocator, DimName, MatrixMN, Scalar};
+use na::{DefaultAllocator, DimName, Scalar, VectorN};
 
-use {Dual, Float, Zero};
+use {Float, Hyperdual, Zero};
 
-pub fn norm<T: Scalar + Float, M: DimName, N: DimName>(v: &MatrixMN<Dual<T>, M, N>) -> Dual<T>
+/// Computes the norm of a vector of Hyperdual.
+pub fn norm<T: Scalar + Float, M: DimName, N: DimName>(v: &VectorN<Hyperdual<T, N>, M>) -> Hyperdual<T, N>
 where
-    Dual<T>: Float,
-    DefaultAllocator: Allocator<Dual<T>, N> + Allocator<Dual<T>, M, N>,
+    Hyperdual<T, N>: Float,
+    DefaultAllocator: Allocator<Hyperdual<T, N>, M> + Allocator<T, N>,
+    <DefaultAllocator as Allocator<T, N>>::Buffer: Copy,
 {
-    let mut val = Dual::zero();
+    let mut val = Hyperdual::<T, N>::zero();
 
     for i in 0..M::dim() {
-        for j in 0..N::dim() {
-            val = val + v[(i, j)].powi(2);
-        }
+        val = val + v[i].powi(2);
     }
 
     val.sqrt()
