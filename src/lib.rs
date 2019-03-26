@@ -1161,6 +1161,18 @@ impl<T: Scalar> Dual<T> {
     pub fn dual(&self) -> T {
         self[1]
     }
+
+    /// Returns a reference to the dual part
+    #[inline]
+    pub fn dual_ref(&self) -> &T {
+        &self[1]
+    }
+
+    /// Returns a mutable reference to the dual part
+    #[inline]
+    pub fn dual_mut(&mut self) -> &mut T {
+        &mut self[1]
+    }
 }
 
 pub type DualN<T, N> = Hyperdual<T, N>;
