@@ -109,7 +109,6 @@ where
     }
 
     /// Returns a mutable reference to the real part
-    #[inline]
     pub fn real_mut(&mut self) -> &mut T {
         &mut self[0]
     }
@@ -1169,6 +1168,18 @@ impl<T: Scalar> Dual<T> {
     #[inline]
     pub fn dual(&self) -> T {
         self[1]
+    }
+
+    /// Returns a reference to the dual part
+    #[inline]
+    pub fn dual_ref(&self) -> &T {
+        &self[1]
+    }
+
+    /// Returns a mutable reference to the dual part
+    #[inline]
+    pub fn dual_mut(&mut self) -> &mut T {
+        &mut self[1]
     }
 }
 
