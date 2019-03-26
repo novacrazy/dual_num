@@ -1,10 +1,10 @@
 extern crate dual_num;
 extern crate nalgebra as na;
 
-use na::{Matrix2x6, Matrix3x6, Matrix6, U3, U6, Vector2, Vector3, Vector6};
+use na::{Matrix2x6, Matrix3x6, Matrix6, Vector2, Vector3, Vector6, U3, U6};
 
 use dual_num::linalg::norm;
-use dual_num::{differentiate, Dual, Float, FloatConst};
+use dual_num::{differentiate, Dual, DualN, Float, FloatConst, Hyperdual};
 use dual_num::{partials, partials_t};
 
 macro_rules! abs_within {
@@ -57,6 +57,15 @@ fn derive() {
 
     assert_eq!(x.real(), 6i32, "incorrect real");
     assert_eq!(x.dual(), 5i32, "incorrect real");
+
+    let c = Dual::new(1.0 / 2f64.sqrt(), 1.0).asin();
+    abs_within!(c.dual(), 1.414213562373095, std::f64::EPSILON, "incorrect d/dx arcsin");
+
+    let c = Dual::new(1.0 / 2f64.sqrt(), 1.0).acos();
+    abs_within!(c.dual(), -1.414213562373095, std::f64::EPSILON, "incorrect d/dx arccos");
+
+    let c = Dual::new(1.0 / 2f64.sqrt(), 1.0).atan();
+    abs_within!(c.dual(), 2.0f64 / 3.0f64, std::f64::EPSILON, "incorrect d/dx arctan");
 }
 
 #[test]
@@ -355,4 +364,18 @@ fn partials_no_param() {
         1e-20,
         format!("partial computation is incorrect -- here comes the delta: {}", dfdx - expected_dfdx)
     );
+}
+
+#[test]
+fn multivariate() {
+    // find partial derivative at x=4.0, y=5.0 for f(x,y)=x^2+sin(x*y)+y^3
+    let x: Hyperdual<f64, U3> = Hyperdual::from_slice(&[4.0, 1.0, 0.0]);
+    // DualN and Hyperdual are interchangeable aliases. Hyperdual is the anme from Fike 2012
+    // whereas multi-dual is from Revel et al. 2016.
+    let y: DualN<f64, U3> = Hyperdual::from_slice(&[5.0, 0.0, 1.0]);
+
+    let res = x * x + (x * y).sin() + y.powi(3);
+    zero_within!((res[0] - 141.91294525072763), 1e-13, format!("f(4, 5) incorrect"));
+    zero_within!((res[1] - 10.04041030906696), 1e-13, format!("df/dx(4, 5) incorrect"));
+    zero_within!((res[2] - 76.63232824725357), 1e-13, format!("df/dy(4, 5) incorrect"));
 }
