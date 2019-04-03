@@ -2,7 +2,7 @@
 name = "dual_num"
 description = "Fully-featured Dual Number implementation with features for automatic differentiation of multivariate vectorial functions into gradients"
 authors = ["Aaron Trent <novacrazy@gmail.com>", "Christopher Rabotin <christopher.rabotin@gmail.com>"]
-version = "0.2.6"
+version = "0.2.7"
 license = "MIT"
 include = ["src/**/*", "Cargo.toml"]
 keywords = ["dual", "number", "hyperdual", "gradient", "autodifferentiate"]
