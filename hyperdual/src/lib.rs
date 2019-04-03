@@ -5,9 +5,9 @@
 //! ## Usage
 //!
 //! ```rust
-//! extern crate dual_num;
+//! extern crate hyperdual;
 //!
-//! use dual_num::{Dual, Hyperdual, Float, differentiate, U3};
+//! use hyperdual::{Dual, Hyperdual, Float, differentiate, U3};
 //!
 //! fn main() {
 //!     // find partial derivative at x=4.0
@@ -41,36 +41,33 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Div, DivAssign, Mul, MulAssign, 
 
 pub use num_traits::{Float, FloatConst, Num, One, Zero};
 
-mod differentials;
-
-// Re-export the differential functions
-pub use differentials::*;
-
 pub mod linalg;
 
 use num_traits::{FromPrimitive, Inv, MulAdd, MulAddAssign, NumCast, Pow, Signed, ToPrimitive, Unsigned};
 
-use na::{Scalar, VectorN};
+use na::VectorN;
 
 // Re-export traits useful for construction and extension of duals
 pub use na::allocator::Allocator;
 pub use na::dimension::*;
 pub use na::storage::Owned;
-pub use na::{DefaultAllocator, Dim, DimName};
+pub use na::{DefaultAllocator, Dim, DimName, Scalar};
 
-/// Dual Number structure
+/// Hyperdual Number structure
 ///
-/// Although `Dual` does implement `PartialEq` and `PartialOrd`,
+/// Although `Hyperdual` does implement `PartialEq` and `PartialOrd`,
 /// it only compares the real part.
 ///
 /// Additionally, `min` and `max` only compare the real parts, and keep the dual parts.
 ///
-/// Lastly, the `Rem` remainder operator is not correctly or fully defined for `Dual`, and will panic.
+/// Lastly, the `Rem` remainder operator is not correctly or fully defined for `Hyperdual`, and will panic.
 #[derive(Clone, Copy)]
 pub struct Hyperdual<T: Scalar, N: Dim + DimName>(VectorN<T, N>)
 where
     DefaultAllocator: Allocator<T, N>,
     Owned<T, N>: Copy;
+
+pub type DualN<T, N> = Hyperdual<T, N>;
 
 impl<T: Scalar, N: Dim + DimName> Hyperdual<T, N>
 where
@@ -131,6 +128,34 @@ where
         F: FnMut(usize) -> T,
     {
         Hyperdual(VectorN::<T, N>::from_fn(|i, _| f(i)))
+    }
+}
+
+pub type Dual<T> = Hyperdual<T, U2>;
+
+impl<T: Scalar> Dual<T> {
+    /// Create a new dual number from the real and dual parts
+    #[inline]
+    pub fn new(real: T, dual: T) -> Dual<T> {
+        Dual::from_slice(&[real, dual])
+    }
+
+    /// Returns the dual part
+    #[inline]
+    pub fn dual(&self) -> T {
+        self[1]
+    }
+
+    /// Returns a reference to the dual part
+    #[inline]
+    pub fn dual_ref(&self) -> &T {
+        &self[1]
+    }
+
+    /// Returns a mutable reference to the dual part
+    #[inline]
+    pub fn dual_mut(&mut self) -> &mut T {
+        &mut self[1]
     }
 }
 
@@ -556,8 +581,9 @@ macro_rules! impl_mul_add {
     ($(<$a:ident, $b:ident>),*) => {
         $(
             impl<T: Scalar + Num + Mul + Add, N: Dim + DimName> MulAdd<$a, $b> for Hyperdual<T,N>where
-    DefaultAllocator: Allocator<T, N>,
-    Owned<T, N>: Copy, {
+                DefaultAllocator: Allocator<T, N>,
+                Owned<T, N>: Copy,
+            {
                 type Output = Hyperdual<T,N>;
 
                 #[inline]
@@ -567,8 +593,9 @@ macro_rules! impl_mul_add {
             }
 
             impl<T: Scalar + Num + Mul + Add, N: Dim + DimName> MulAddAssign<$a, $b> for Hyperdual<T,N>where
-    DefaultAllocator: Allocator<T, N>,
-    Owned<T, N>: Copy, {
+                DefaultAllocator: Allocator<T, N>,
+                Owned<T, N>: Copy,
+            {
                 #[inline]
                 fn mul_add_assign(&mut self, a: $a, b: $b) {
                     *self = (*self * a) + b;
@@ -1157,34 +1184,6 @@ where
 // TODO
 // impl<T: na::Real> na::Real for Hyperdual<T,N> {}
 
-pub type Dual<T> = Hyperdual<T, U2>;
-
-impl<T: Scalar> Dual<T> {
-    #[inline]
-    pub fn new(real: T, dual: T) -> Dual<T> {
-        Dual::from_slice(&[real, dual])
-    }
-
-    #[inline]
-    pub fn dual(&self) -> T {
-        self[1]
-    }
-
-    /// Returns a reference to the dual part
-    #[inline]
-    pub fn dual_ref(&self) -> &T {
-        &self[1]
-    }
-
-    /// Returns a mutable reference to the dual part
-    #[inline]
-    pub fn dual_mut(&mut self) -> &mut T {
-        &mut self[1]
-    }
-}
-
-pub type DualN<T, N> = Hyperdual<T, N>;
-
 pub fn hyperspace_from_vector<T: Scalar + Num + Zero, D: Dim + DimName, N: Dim + DimName>(v: &VectorN<T, N>) -> VectorN<Hyperdual<T, D>, N>
 where
     DefaultAllocator: Allocator<T, D> + Allocator<T, N> + Allocator<Hyperdual<T, D>, N>,
@@ -1203,4 +1202,13 @@ where
         });
     }
     VectorN::<Hyperdual<T, D>, N>::from_row_slice(&space_slice)
+}
+
+/// Evaluates the function using dual numbers to get the partial derivative at the input point
+#[inline]
+pub fn differentiate<T: Scalar + One, F>(x: T, f: F) -> T
+where
+    F: Fn(Dual<T>) -> Dual<T>,
+{
+    f(Dual::new(x, T::one())).dual()
 }

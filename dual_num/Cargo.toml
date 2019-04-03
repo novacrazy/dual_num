@@ -1,0 +1,15 @@
+[package]
+name = "dual_num"
+description = "Fully-featured Dual Number implementation with features for automatic differentiation of multivariate vectorial functions"
+authors = ["Aaron Trent <novacrazy@gmail.com>", "Christopher Rabotin <christopher.rabotin@gmail.com>"]
+version = "0.3.0"
+license = "MIT"
+edition = "2018"
+include = ["src/**/*", "Cargo.toml"]
+keywords = ["dual", "number", "hyperdual", "multidimentional", "autodifferentiate"]
+readme = "README.md"
+documentation = "https://docs.rs/hyperdual/"
+repository = "https://github.com/novacrazy/hyperdual"
+
+[dependencies]
+hyperdual = {path = "../hyperdual"}

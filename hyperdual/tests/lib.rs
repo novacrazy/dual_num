@@ -1,10 +1,10 @@
-extern crate dual_num;
+extern crate hyperdual;
 extern crate nalgebra as na;
 
-use na::{Matrix2x6, Matrix6, Vector2, Vector3, Vector6, VectorN, U2, U3, U6, U7};
+use na::{Matrix2x6, Matrix6, Vector2, Vector3, Vector6, VectorN, U2, U3, U6, U7, DimName};
 
-use dual_num::linalg::norm;
-use dual_num::{differentiate, hyperspace_from_vector, DimName, Dual, DualN, Float, FloatConst, Hyperdual};
+use hyperdual::linalg::norm;
+use hyperdual::{differentiate, hyperspace_from_vector, Dual, DualN, Float, FloatConst, Hyperdual};
 
 macro_rules! abs_within {
     ($x:expr, $val:expr, $eps:expr, $msg:expr) => {
