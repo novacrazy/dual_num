@@ -930,9 +930,9 @@ where
     #[inline]
     fn min(self, other: Self) -> Self {
         if self.real() < other.real() {
-            other
-        } else {
             self
+        } else {
+            other
         }
     }
 
